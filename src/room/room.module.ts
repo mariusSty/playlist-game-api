@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { RoomService } from './room.service';
+import { PrismaService } from 'src/prisma.service';
 import { RoomController } from './room.controller';
+import { RoomService } from './room.service';
 
 @Module({
   controllers: [RoomController],
-  providers: [RoomService],
+  providers: [RoomService, PrismaService],
 })
 export class RoomModule {}
