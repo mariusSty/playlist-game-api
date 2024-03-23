@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
@@ -8,6 +9,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import { CreateRoomDto } from '../dto/create-room.dto';
 import { RoomService } from './room.service';
 
 @Controller('room')
@@ -15,8 +17,9 @@ export class RoomController {
   constructor(private readonly roomService: RoomService) {}
 
   @Post()
-  async create() {
-    return this.roomService.create();
+  async create(@Body() createRoomDto: CreateRoomDto) {
+    const { id, name } = createRoomDto;
+    return this.roomService.create(id, name);
   }
 
   @Get(':pin')
@@ -25,10 +28,13 @@ export class RoomController {
   }
 
   @Patch(':pin')
-  async update(@Param('pin') pin: string) {
+  async update(
+    @Param('pin') pin: string,
+    @Body() updateRoomDto: CreateRoomDto,
+  ) {
     try {
-      const roomUpdated = await this.roomService.update(pin);
-      return roomUpdated;
+      const { id, name } = updateRoomDto;
+      return await this.roomService.update(pin, id, name);
     } catch (error) {
       throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
     }
