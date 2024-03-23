@@ -1,31 +1,50 @@
+import { faker } from '@faker-js/faker';
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
 export class RoomService {
   constructor(private prisma: PrismaService) {}
 
-  create(createRoomDto: Prisma.RoomCreateInput) {
+  create() {
     return this.prisma.room.create({
-      data: createRoomDto,
-    });
-  }
-
-  findOne(id: number) {
-    return this.prisma.room.findUnique({
-      where: {
-        id,
+      data: {
+        pin: faker.number
+          .int({ min: 0, max: 9999 })
+          .toString()
+          .padStart(4, '0'),
+        users: {
+          create: {
+            name: faker.animal.cat(),
+          },
+        },
       },
     });
   }
 
-  update(id: number, updateRoomDto: Prisma.RoomUpdateInput) {
+  findOne(pin: string) {
+    return this.prisma.room.findUniqueOrThrow({
+      where: {
+        pin,
+      },
+      include: {
+        users: true,
+      },
+    });
+  }
+
+  update(pin: string) {
     return this.prisma.room.update({
       where: {
-        id,
+        pin,
       },
-      data: updateRoomDto,
+      data: {
+        users: {
+          create: {
+            name: faker.animal.cat(),
+          },
+        },
+      },
     });
   }
 

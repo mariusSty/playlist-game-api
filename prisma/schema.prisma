@@ -22,6 +22,6 @@ model User {
 
 model Room {
   id    Int    @id @default(autoincrement())
-  pin   String
+  pin   String @unique
   users User[]
 }

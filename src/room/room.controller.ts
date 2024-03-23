@@ -1,13 +1,13 @@
 import {
-  Body,
   Controller,
   Delete,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Patch,
   Post,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { RoomService } from './room.service';
 
 @Controller('room')
@@ -15,21 +15,23 @@ export class RoomController {
   constructor(private readonly roomService: RoomService) {}
 
   @Post()
-  create(@Body() createRoomDto: Prisma.RoomCreateInput) {
-    return this.roomService.create(createRoomDto);
+  async create() {
+    return this.roomService.create();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.roomService.findOne(+id);
+  @Get(':pin')
+  findOne(@Param('pin') pin: string) {
+    return this.roomService.findOne(pin);
   }
 
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateRoomDto: Prisma.RoomUpdateInput,
-  ) {
-    return this.roomService.update(+id, updateRoomDto);
+  @Patch(':pin')
+  async update(@Param('pin') pin: string) {
+    try {
+      const roomUpdated = await this.roomService.update(pin);
+      return roomUpdated;
+    } catch (error) {
+      throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
+    }
   }
 
   @Delete(':id')
