@@ -18,6 +18,7 @@ model User {
   name   String?
   room   Room?   @relation(fields: [roomId], references: [id])
   roomId Int?
+  isHost Boolean @default(false)
 }
 
 model Room {

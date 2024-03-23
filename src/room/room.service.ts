@@ -16,6 +16,7 @@ export class RoomService {
         users: {
           create: {
             name: faker.animal.cat(),
+            isHost: true,
           },
         },
       },
