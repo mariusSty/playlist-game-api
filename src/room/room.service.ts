@@ -6,7 +6,7 @@ import { PrismaService } from 'src/prisma.service';
 export class RoomService {
   constructor(private prisma: PrismaService) {}
 
-  create(id: string, name?: string) {
+  create(id: string) {
     return this.prisma.room.create({
       data: {
         pin: faker.number
@@ -14,15 +14,8 @@ export class RoomService {
           .toString()
           .padStart(4, '0'),
         users: {
-          connectOrCreate: {
-            where: {
-              id,
-            },
-            create: {
-              id,
-              name: name || faker.animal.cat(),
-              isHost: true,
-            },
+          connect: {
+            id,
           },
         },
       },
@@ -40,21 +33,15 @@ export class RoomService {
     });
   }
 
-  update(pin: string, id: string, name: string) {
+  async update(pin: string, id: string) {
     return this.prisma.room.update({
       where: {
         pin,
       },
       data: {
         users: {
-          connectOrCreate: {
-            where: {
-              id,
-            },
-            create: {
-              id,
-              name: name || faker.animal.cat(),
-            },
+          connect: {
+            id,
           },
         },
       },

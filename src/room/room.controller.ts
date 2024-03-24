@@ -1,3 +1,4 @@
+import { faker } from '@faker-js/faker';
 import {
   Body,
   Controller,
@@ -9,17 +10,25 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import { UserService } from 'src/user/user.service';
 import { CreateRoomDto } from '../dto/create-room.dto';
 import { RoomService } from './room.service';
 
 @Controller('room')
 export class RoomController {
-  constructor(private readonly roomService: RoomService) {}
+  constructor(
+    private readonly roomService: RoomService,
+    private readonly userService: UserService,
+  ) {}
 
   @Post()
   async create(@Body() createRoomDto: CreateRoomDto) {
     const { id, name } = createRoomDto;
-    return this.roomService.create(id, name);
+    const user = await this.userService.upsertUser(
+      id,
+      name ? name : faker.animal.cat(),
+    );
+    return this.roomService.create(user.id);
   }
 
   @Get(':pin')
@@ -34,7 +43,11 @@ export class RoomController {
   ) {
     try {
       const { id, name } = updateRoomDto;
-      return await this.roomService.update(pin, id, name);
+      const user = await this.userService.upsertUser(
+        id,
+        name ? name : faker.animal.cat(),
+      );
+      return await this.roomService.update(pin, user.id);
     } catch (error) {
       throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
     }
