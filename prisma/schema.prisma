@@ -19,10 +19,76 @@ model User {
   room   Room?   @relation(fields: [roomId], references: [id])
   roomId Int?
   isHost Boolean @default(false)
+  Pick   Pick[]
+  Guess  Guess[]
 }
 
 model Room {
   id    Int    @id @default(autoincrement())
   pin   String @unique
   users User[]
+  Game  Game[]
+}
+
+model Game {
+  id         Int     @id @default(autoincrement())
+  roomId     Int
+  room       Room    @relation(fields: [roomId], references: [id])
+  isFinished Boolean @default(false)
+  Round      Round[]
+}
+
+model Round {
+  id         Int     @id @default(autoincrement())
+  gameId     Int
+  game       Game    @relation(fields: [gameId], references: [id])
+  themeId    Int
+  theme      Theme   @relation(fields: [themeId], references: [id])
+  isFinished Boolean @default(false)
+  stepId     Int
+  step       Step    @relation(fields: [stepId], references: [id])
+  Pick       Pick[]
+  Guess      Guess[]
+}
+
+model Theme {
+  id              Int     @id @default(autoincrement())
+  description     String
+  isCreatedByUser Boolean @default(false)
+  Round           Round[]
+}
+
+model Song {
+  id     Int     @id @default(autoincrement())
+  title  String
+  artist String
+  url    String
+  Pick   Pick[]
+  Guess  Guess[]
+}
+
+model Pick {
+  id      Int    @id @default(autoincrement())
+  round   Round  @relation(fields: [roundId], references: [id])
+  roundId Int
+  song    Song   @relation(fields: [songId], references: [id])
+  songId  Int
+  user    User   @relation(fields: [userId], references: [id])
+  userId  String
+}
+
+model Guess {
+  id      Int    @id @default(autoincrement())
+  round   Round  @relation(fields: [roundId], references: [id])
+  roundId Int
+  song    Song   @relation(fields: [songId], references: [id])
+  songId  Int
+  user    User   @relation(fields: [userId], references: [id])
+  userId  String
+}
+
+model Step {
+  id    Int     @id @default(autoincrement())
+  name  String
+  Round Round[]
 }
