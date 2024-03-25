@@ -1,3 +1,3 @@
 export class CreateGameDto {
-  roomId: number;
+  pin: string;
 }

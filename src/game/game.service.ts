@@ -11,7 +11,7 @@ export class GameService {
       data: {
         room: {
           connect: {
-            id: createGameDto.roomId,
+            pin: createGameDto.pin,
           },
         },
         round: {
