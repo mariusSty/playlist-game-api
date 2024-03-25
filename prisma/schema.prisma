@@ -19,44 +19,44 @@ model User {
   room    Room?   @relation(fields: [roomId], references: [id])
   roomId  Int?
   isHost  Boolean @default(false)
-  Pick    Pick[]
-  Guessed Guess[] @relation("guessedUser")
-  Guess   Guess[] @relation("guessUser")
+  pick    Pick[]
+  guessed Guess[] @relation("guessed")
+  guesses Guess[] @relation("guesses")
 }
 
 model Room {
   id    Int    @id @default(autoincrement())
   pin   String @unique
   users User[]
-  Game  Game[]
+  game  Game?
 }
 
 model Game {
   id         Int     @id @default(autoincrement())
-  roomId     Int
+  roomId     Int     @unique
   room       Room    @relation(fields: [roomId], references: [id])
   isFinished Boolean @default(false)
-  Round      Round[]
+  round      Round[]
 }
 
 model Round {
   id         Int     @id @default(autoincrement())
   gameId     Int
   game       Game    @relation(fields: [gameId], references: [id])
-  themeId    Int
-  theme      Theme   @relation(fields: [themeId], references: [id])
+  themeId    Int?
+  theme      Theme?  @relation(fields: [themeId], references: [id])
   isFinished Boolean @default(false)
   stepId     Int
   step       Step    @relation(fields: [stepId], references: [id])
-  Pick       Pick[]
-  Guess      Guess[]
+  pick       Pick[]
+  guess      Guess[]
 }
 
 model Theme {
   id              Int     @id @default(autoincrement())
   description     String
   isCreatedByUser Boolean @default(false)
-  Round           Round[]
+  round           Round[]
 }
 
 model Song {
@@ -64,8 +64,8 @@ model Song {
   title  String
   artist String
   url    String
-  Pick   Pick[]
-  Guess  Guess[]
+  pick   Pick[]
+  guess  Guess[]
 }
 
 model Pick {
@@ -84,14 +84,14 @@ model Guess {
   roundId       Int
   song          Song   @relation(fields: [songId], references: [id])
   songId        Int
-  guessedUser   User   @relation(fields: [guessedUserId], references: [id], name: "guessedUser")
+  guessedUser   User   @relation(fields: [guessedUserId], references: [id], name: "guessed")
   guessedUserId String
-  guessUser     User   @relation(fields: [guessUserId], references: [id], name: "guessUser")
+  guessUser     User   @relation(fields: [guessUserId], references: [id], name: "guesses")
   guessUserId   String
 }
 
 model Step {
   id    Int     @id @default(autoincrement())
   name  String
-  Round Round[]
+  round Round[]
 }
