@@ -14,13 +14,14 @@ datasource db {
 }
 
 model User {
-  id     String  @id @default(uuid())
-  name   String?
-  room   Room?   @relation(fields: [roomId], references: [id])
-  roomId Int?
-  isHost Boolean @default(false)
-  Pick   Pick[]
-  Guess  Guess[]
+  id      String  @id @default(uuid())
+  name    String?
+  room    Room?   @relation(fields: [roomId], references: [id])
+  roomId  Int?
+  isHost  Boolean @default(false)
+  Pick    Pick[]
+  Guessed Guess[] @relation("guessedUser")
+  Guess   Guess[] @relation("guessUser")
 }
 
 model Room {
@@ -78,13 +79,15 @@ model Pick {
 }
 
 model Guess {
-  id      Int    @id @default(autoincrement())
-  round   Round  @relation(fields: [roundId], references: [id])
-  roundId Int
-  song    Song   @relation(fields: [songId], references: [id])
-  songId  Int
-  user    User   @relation(fields: [userId], references: [id])
-  userId  String
+  id            Int    @id @default(autoincrement())
+  round         Round  @relation(fields: [roundId], references: [id])
+  roundId       Int
+  song          Song   @relation(fields: [songId], references: [id])
+  songId        Int
+  guessedUser   User   @relation(fields: [guessedUserId], references: [id], name: "guessedUser")
+  guessedUserId String
+  guessUser     User   @relation(fields: [guessUserId], references: [id], name: "guessUser")
+  guessUserId   String
 }
 
 model Step {
