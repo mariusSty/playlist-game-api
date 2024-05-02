@@ -11,7 +11,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
-import { CreateRoomDto } from '../dto/create-room.dto';
+import { CreateRoomDto } from './dto/create-room.dto';
 import { RoomService } from './room.service';
 
 @Controller('room')
