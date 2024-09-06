@@ -33,7 +33,7 @@ export class RoomService {
     });
   }
 
-  async update(pin: string, id: string) {
+  async connect(pin: string, id: string) {
     return this.prisma.room.update({
       where: {
         pin,
@@ -41,6 +41,21 @@ export class RoomService {
       data: {
         users: {
           connect: {
+            id,
+          },
+        },
+      },
+    });
+  }
+
+  async disconnect(pin: string, id: string) {
+    return this.prisma.room.update({
+      where: {
+        pin,
+      },
+      data: {
+        users: {
+          disconnect: {
             id,
           },
         },

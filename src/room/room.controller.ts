@@ -48,7 +48,7 @@ export class RoomController {
         id,
         name ? name : faker.animal.cat(),
       );
-      return await this.roomService.update(pin, user.id);
+      return this.roomService.connect(pin, user.id);
     } catch (error) {
       throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
     }
