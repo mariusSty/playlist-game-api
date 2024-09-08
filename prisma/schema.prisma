@@ -14,21 +14,24 @@ datasource db {
 }
 
 model User {
-  id      String  @id @default(uuid())
-  name    String?
-  room    Room?   @relation(fields: [roomId], references: [id])
-  roomId  Int?
-  isHost  Boolean @default(false)
-  pick    Pick[]
-  guessed Guess[] @relation("guessed")
-  guesses Guess[] @relation("guesses")
+  id         String  @id @default(uuid())
+  name       String?
+  room       Room?   @relation("users", fields: [roomId], references: [id])
+  roomId     Int?
+  pick       Pick[]
+  guessed    Guess[] @relation("guessed")
+  guesses    Guess[] @relation("guesses")
+  roomHost   Room?   @relation("host")
+  roomHostId Int?
 }
 
 model Room {
-  id    Int    @id @default(autoincrement())
-  pin   String @unique
-  users User[]
-  game  Game?
+  id     Int    @id @default(autoincrement())
+  pin    String @unique
+  users  User[] @relation("users")
+  host   User   @relation("host", fields: [hostId], references: [id])
+  hostId String @unique
+  game   Game?
 }
 
 model Game {

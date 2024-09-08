@@ -27,7 +27,6 @@ export class RoomController {
     const user = await this.userService.upsertUser(
       id,
       name ? name : faker.animal.cat(),
-      true,
     );
     return this.roomService.create(user.id);
   }

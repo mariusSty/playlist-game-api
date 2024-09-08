@@ -5,19 +5,17 @@ import { PrismaService } from 'src/prisma.service';
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  upsertUser(id: string, name: string, isHost = false) {
+  upsertUser(id: string, name: string) {
     return this.prisma.user.upsert({
       where: {
         id,
       },
       update: {
         name,
-        isHost,
       },
       create: {
         id,
         name,
-        isHost,
       },
     });
   }

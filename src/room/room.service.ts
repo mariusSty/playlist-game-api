@@ -18,6 +18,11 @@ export class RoomService {
             id,
           },
         },
+        host: {
+          connect: {
+            id,
+          },
+        },
       },
     });
   }
@@ -33,7 +38,7 @@ export class RoomService {
     });
   }
 
-  async connect(pin: string, id: string) {
+  connect(pin: string, id: string) {
     return this.prisma.room.update({
       where: {
         pin,
@@ -48,7 +53,7 @@ export class RoomService {
     });
   }
 
-  async disconnect(pin: string, id: string) {
+  disconnect(pin: string, id: string) {
     return this.prisma.room.update({
       where: {
         pin,
@@ -63,6 +68,16 @@ export class RoomService {
     });
   }
 
+  updateHost(pin: string, hostId: string) {
+    return this.prisma.room.update({
+      where: {
+        pin,
+      },
+      data: {
+        hostId,
+      },
+    });
+  }
   remove(id: number) {
     return this.prisma.room.delete({
       where: {
