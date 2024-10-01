@@ -23,6 +23,7 @@ model User {
   guesses    Guess[] @relation("guesses")
   roomHost   Room?   @relation("host")
   roomHostId Int?
+  Round      Round[]
 }
 
 model Room {
@@ -35,24 +36,29 @@ model Room {
 }
 
 model Game {
-  id         Int     @id @default(autoincrement())
-  roomId     Int     @unique
-  room       Room    @relation(fields: [roomId], references: [id])
-  isFinished Boolean @default(false)
-  round      Round[]
+  id            Int     @id @default(autoincrement())
+  roomId        Int     @unique
+  room          Room    @relation(fields: [roomId], references: [id])
+  isFinished    Boolean @default(false)
+  round         Round[]
+  actualRound   Round?  @relation("actual", fields: [actualRoundId], references: [id])
+  actualRoundId Int?
 }
 
 model Round {
-  id         Int     @id @default(autoincrement())
-  gameId     Int
-  game       Game    @relation(fields: [gameId], references: [id])
-  themeId    Int?
-  theme      Theme?  @relation(fields: [themeId], references: [id])
-  isFinished Boolean @default(false)
-  stepId     Int
-  step       Step    @relation(fields: [stepId], references: [id])
-  pick       Pick[]
-  guess      Guess[]
+  id            Int     @id @default(autoincrement())
+  gameId        Int
+  game          Game    @relation(fields: [gameId], references: [id])
+  actualGames   Game[]  @relation("actual")
+  themeId       Int?
+  theme         Theme?  @relation(fields: [themeId], references: [id])
+  isFinished    Boolean @default(false)
+  stepId        Int
+  step          Step    @relation(fields: [stepId], references: [id])
+  pick          Pick[]
+  guess         Guess[]
+  themeMaster   User    @relation(fields: [themeMasterId], references: [id])
+  themeMasterId String
 }
 
 model Theme {

@@ -5,13 +5,17 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
+import { GameService } from 'src/game/game.service';
 import { RoomService } from 'src/room/room.service';
 
 @WebSocketGateway({ namespace: 'rooms' })
 export class RoomGateway {
   @WebSocketServer() server: Server;
 
-  constructor(private readonly roomService: RoomService) {}
+  constructor(
+    private readonly roomService: RoomService,
+    private readonly gameService: GameService,
+  ) {}
 
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(@MessageBody() data: { pin: string }) {
@@ -42,13 +46,19 @@ export class RoomGateway {
 
   @SubscribeMessage('startGame')
   async handleStartGame(@MessageBody() data: { pin: string }) {
-    const { pin } = data;
-    this.server.emit('gameStarted', { pin });
+    const room = await this.roomService.findOne(data.pin);
+    const game = await this.gameService.create({
+      pin: room.pin,
+      userId: room.hostId,
+    });
+    this.server.emit('gameStarted', { pin: game.id });
   }
 
   @SubscribeMessage('pickTheme')
-  async handlePickTheme(@MessageBody() data: { pin: string }) {
-    const { pin } = data;
-    this.server.emit('themePicked', { pin });
+  async handlePickTheme(
+    @MessageBody() data: { roundId: number; themeId: number },
+  ) {
+    this.gameService.assignTheme(data);
+    this.server.emit('themePicked', { roundId: data.roundId });
   }
 }
