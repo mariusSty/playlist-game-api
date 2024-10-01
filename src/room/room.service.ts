@@ -34,6 +34,7 @@ export class RoomService {
       },
       include: {
         users: true,
+        host: true,
       },
     });
   }
