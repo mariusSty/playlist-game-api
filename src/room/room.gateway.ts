@@ -47,11 +47,11 @@ export class RoomGateway {
   @SubscribeMessage('startGame')
   async handleStartGame(@MessageBody() data: { pin: string }) {
     const room = await this.roomService.findOne(data.pin);
-    const game = await this.gameService.create({
+    await this.gameService.create({
       pin: room.pin,
       userId: room.hostId,
     });
-    this.server.emit('gameStarted', { pin: game.id });
+    this.server.emit('gameStarted');
   }
 
   @SubscribeMessage('pickTheme')
