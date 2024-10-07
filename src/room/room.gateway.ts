@@ -58,7 +58,7 @@ export class RoomGateway {
   async handlePickTheme(
     @MessageBody() data: { roundId: number; themeId: number },
   ) {
-    this.gameService.assignTheme(data);
+    await this.gameService.assignTheme(data);
     this.server.emit('themePicked', { roundId: data.roundId });
   }
 }

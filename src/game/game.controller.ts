@@ -11,8 +11,8 @@ export class GameController {
     return this.gameService.create(createGameDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: number) {
-    return this.gameService.findOne(+id);
+  @Get(':pin')
+  async findOne(@Param('pin') pin: string) {
+    return this.gameService.findOne(pin);
   }
 }

@@ -33,6 +33,7 @@ export class GameService {
         round: true,
       },
     });
+
     return this.prisma.game.update({
       where: {
         id: game.id,
@@ -47,13 +48,18 @@ export class GameService {
     });
   }
 
-  findOne(id: number) {
+  findOne(pin: string) {
     return this.prisma.game.findFirstOrThrow({
-      where: { id },
+      where: {
+        room: {
+          pin,
+        },
+      },
       include: {
         actualRound: {
           include: {
             themeMaster: true,
+            theme: true,
           },
         },
       },
@@ -67,6 +73,9 @@ export class GameService {
       },
       data: {
         themeId: assignThemeDto.themeId,
+      },
+      include: {
+        theme: true,
       },
     });
   }
