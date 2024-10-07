@@ -5,6 +5,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
+import { AssignSongDto } from 'src/game/dto/create-game.dto';
 import { GameService } from 'src/game/game.service';
 import { RoomService } from 'src/room/room.service';
 
@@ -60,5 +61,17 @@ export class RoomGateway {
   ) {
     await this.gameService.assignTheme(data);
     this.server.emit('themePicked', { roundId: data.roundId });
+  }
+
+  @SubscribeMessage('validSong')
+  async handleValidSong(@MessageBody() data: AssignSongDto) {
+    await this.gameService.assignSong(data);
+    const round = await this.gameService.getRound(data.roundId);
+    const totalUsersValidated = await this.gameService.countUsersValidatedSong(
+      data.roundId,
+    );
+    if (totalUsersValidated === round.game.room.users.length) {
+      this.server.emit('nextRound', { roundId: data.roundId });
+    }
   }
 }

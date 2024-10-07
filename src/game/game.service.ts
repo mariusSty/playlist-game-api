@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { AssignThemeDto, CreateGameDto } from './dto/create-game.dto';
+import {
+  AssignSongDto,
+  AssignThemeDto,
+  CreateGameDto,
+} from './dto/create-game.dto';
 
 @Injectable()
 export class GameService {
@@ -66,6 +70,25 @@ export class GameService {
     });
   }
 
+  getRound(id: number) {
+    return this.prisma.round.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        game: {
+          include: {
+            room: {
+              include: {
+                users: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
   assignTheme(assignThemeDto: AssignThemeDto) {
     return this.prisma.round.update({
       where: {
@@ -76,6 +99,38 @@ export class GameService {
       },
       include: {
         theme: true,
+      },
+    });
+  }
+
+  assignSong(assignSongDto: AssignSongDto) {
+    return this.prisma.pick.create({
+      data: {
+        song: {
+          create: {
+            title: assignSongDto.song.title,
+            artist: assignSongDto.song.artist,
+            url: assignSongDto.song.url,
+          },
+        },
+        user: {
+          connect: {
+            id: assignSongDto.userId,
+          },
+        },
+        round: {
+          connect: {
+            id: assignSongDto.roundId,
+          },
+        },
+      },
+    });
+  }
+
+  countUsersValidatedSong(roundId: number) {
+    return this.prisma.pick.count({
+      where: {
+        roundId,
       },
     });
   }
