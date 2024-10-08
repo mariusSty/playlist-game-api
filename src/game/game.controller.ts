@@ -15,4 +15,10 @@ export class GameController {
   async findOne(@Param('pin') pin: string) {
     return this.gameService.findOne(pin);
   }
+
+  @Get(':pin/pick')
+  async pick(@Param('pin') pin: string) {
+    const picks = await this.gameService.getPicks(pin);
+    return picks[Math.floor(Math.random() * picks.length)];
+  }
 }

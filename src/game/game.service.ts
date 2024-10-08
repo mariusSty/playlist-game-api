@@ -134,4 +134,21 @@ export class GameService {
       },
     });
   }
+
+  getPicks(pin: string) {
+    return this.prisma.pick.findMany({
+      where: {
+        round: {
+          game: {
+            room: {
+              pin,
+            },
+          },
+        },
+      },
+      include: {
+        song: true,
+      },
+    });
+  }
 }
