@@ -16,9 +16,9 @@ export class GameController {
     return this.gameService.findOne(pin);
   }
 
-  @Get(':pin/pick')
-  async pick(@Param('pin') pin: string) {
-    const picks = await this.gameService.getPicks(pin);
-    return picks[Math.floor(Math.random() * picks.length)];
+  @Get(':pin/votes')
+  async votes(@Param('pin') pin: string) {
+    const game = await this.gameService.findOne(pin);
+    return this.gameService.getFirstVoteNotFinished(game.actualRound.id);
   }
 }

@@ -74,6 +74,10 @@ export class RoomGateway {
       data.roundId,
     );
     if (totalUsersValidated === round.game.room.users.length) {
+      const picks = await this.gameService.getPicks(round.game.room.pin);
+      for (const pick of picks) {
+        await this.gameService.createVote(pick.song.id, data.roundId);
+      }
       this.server.emit('nextRound', { roundId: data.roundId });
     }
   }
@@ -82,10 +86,11 @@ export class RoomGateway {
   async handleVote(
     @MessageBody('guessId') guessId: string,
     @MessageBody('userId') userId: string,
+    @MessageBody('voteId', ParseIntPipe) voteId: number,
     @MessageBody('roundId', ParseIntPipe) roundId: number,
   ) {
-    await this.guessService.create({ guessId, userId, roundId });
-    const totalVotes = await this.guessService.countByRoundId(roundId);
+    await this.guessService.create({ guessId, userId, voteId });
+    const totalVotes = await this.guessService.countByVoteId(voteId);
     const round = await this.gameService.getRound(roundId);
     if (totalVotes === round.game.room.users.length) {
       this.server.emit('userVoted', { roundId });

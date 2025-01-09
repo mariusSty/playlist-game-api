@@ -166,4 +166,37 @@ export class GameService {
       },
     });
   }
+
+  createVote(songId: number, roundId: number) {
+    return this.prisma.vote.create({
+      data: {
+        song: {
+          connect: {
+            id: songId,
+          },
+        },
+        round: {
+          connect: {
+            id: roundId,
+          },
+        },
+      },
+    });
+  }
+
+  getFirstVoteNotFinished(roundId: number) {
+    return this.prisma.vote.findFirst({
+      where: {
+        isFinished: false,
+        roundId,
+      },
+      select: {
+        song: {
+          select: {
+            title: true,
+          },
+        },
+      },
+    });
+  }
 }

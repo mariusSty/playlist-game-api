@@ -5,7 +5,7 @@ import { PrismaService } from 'src/prisma.service';
 export class GuessService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: { guessId: string; userId: string; roundId: number }) {
+  async create(data: { guessId: string; userId: string; voteId: number }) {
     return this.prisma.guess.create({
       data: {
         guessedUser: {
@@ -18,18 +18,18 @@ export class GuessService {
             id: data.guessId,
           },
         },
-        round: {
+        vote: {
           connect: {
-            id: data.roundId,
+            id: data.voteId,
           },
         },
       },
     });
   }
 
-  async countByRoundId(roundId: number) {
+  async countByVoteId(voteId: number) {
     return this.prisma.guess.count({
-      where: { roundId },
+      where: { vote: { id: voteId } },
     });
   }
 }
