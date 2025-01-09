@@ -1,3 +1,4 @@
+import { ParseIntPipe } from '@nestjs/common';
 import {
   MessageBody,
   SubscribeMessage,
@@ -7,6 +8,7 @@ import {
 import { Server } from 'socket.io';
 import { AssignSongDto } from 'src/game/dto/create-game.dto';
 import { GameService } from 'src/game/game.service';
+import { GuessService } from 'src/guess/guess.service';
 import { RoomService } from 'src/room/room.service';
 
 @WebSocketGateway({ namespace: 'rooms' })
@@ -16,6 +18,7 @@ export class RoomGateway {
   constructor(
     private readonly roomService: RoomService,
     private readonly gameService: GameService,
+    private readonly guessService: GuessService,
   ) {}
 
   @SubscribeMessage('joinRoom')
@@ -72,6 +75,20 @@ export class RoomGateway {
     );
     if (totalUsersValidated === round.game.room.users.length) {
       this.server.emit('nextRound', { roundId: data.roundId });
+    }
+  }
+
+  @SubscribeMessage('vote')
+  async handleVote(
+    @MessageBody('guessId') guessId: string,
+    @MessageBody('userId') userId: string,
+    @MessageBody('roundId', ParseIntPipe) roundId: number,
+  ) {
+    await this.guessService.create({ guessId, userId, roundId });
+    const totalVotes = await this.guessService.countByRoundId(roundId);
+    const round = await this.gameService.getRound(roundId);
+    if (totalVotes === round.game.room.users.length) {
+      this.server.emit('userVoted', { roundId });
     }
   }
 }

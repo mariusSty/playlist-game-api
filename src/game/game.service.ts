@@ -104,15 +104,23 @@ export class GameService {
   }
 
   assignSong(assignSongDto: AssignSongDto) {
-    return this.prisma.pick.create({
-      data: {
+    return this.prisma.pick.upsert({
+      where: {
+        roundId_userId: {
+          roundId: assignSongDto.roundId,
+          userId: assignSongDto.userId,
+        },
+      },
+      update: {
         song: {
-          create: {
+          update: {
             title: assignSongDto.song.title,
             artist: assignSongDto.song.artist,
             url: assignSongDto.song.url,
           },
         },
+      },
+      create: {
         user: {
           connect: {
             id: assignSongDto.userId,
@@ -121,6 +129,13 @@ export class GameService {
         round: {
           connect: {
             id: assignSongDto.roundId,
+          },
+        },
+        song: {
+          create: {
+            title: assignSongDto.song.title,
+            artist: assignSongDto.song.artist,
+            url: assignSongDto.song.url,
           },
         },
       },
