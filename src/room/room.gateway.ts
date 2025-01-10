@@ -1,4 +1,3 @@
-import { ParseIntPipe } from '@nestjs/common';
 import {
   MessageBody,
   SubscribeMessage,
@@ -6,9 +5,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
-import { AssignSongDto } from 'src/game/dto/create-game.dto';
 import { GameService } from 'src/game/game.service';
-import { GuessService } from 'src/guess/guess.service';
 import { RoomService } from 'src/room/room.service';
 
 @WebSocketGateway({ namespace: 'rooms' })
@@ -18,7 +15,6 @@ export class RoomGateway {
   constructor(
     private readonly roomService: RoomService,
     private readonly gameService: GameService,
-    private readonly guessService: GuessService,
   ) {}
 
   @SubscribeMessage('joinRoom')
@@ -49,51 +45,20 @@ export class RoomGateway {
   }
 
   @SubscribeMessage('startGame')
-  async handleStartGame(@MessageBody() data: { pin: string }) {
+  async handleStartGame(@MessageBody() data: { pin: string; userId: string }) {
     const room = await this.roomService.findOne(data.pin);
-    await this.gameService.create({
-      pin: room.pin,
-      userId: room.hostId,
-    });
+    await this.gameService.create(
+      data.pin,
+      room.users.map((user) => user.id),
+    );
     this.server.emit('gameStarted');
   }
 
   @SubscribeMessage('pickTheme')
   async handlePickTheme(
-    @MessageBody() data: { roundId: number; themeId: number },
+    @MessageBody() data: { roundId: number; theme: string },
   ) {
-    await this.gameService.assignTheme(data);
+    await this.gameService.updateRound(Number(data.roundId), data.theme);
     this.server.emit('themePicked', { roundId: data.roundId });
-  }
-
-  @SubscribeMessage('validSong')
-  async handleValidSong(@MessageBody() data: AssignSongDto) {
-    await this.gameService.assignSong(data);
-    const round = await this.gameService.getRound(data.roundId);
-    const totalUsersValidated = await this.gameService.countUsersValidatedSong(
-      data.roundId,
-    );
-    if (totalUsersValidated === round.game.room.users.length) {
-      const picks = await this.gameService.getPicks(round.game.room.pin);
-      for (const pick of picks) {
-        await this.gameService.createVote(pick.song.id, data.roundId);
-      }
-      this.server.emit('nextRound', { roundId: data.roundId });
-    }
-  }
-
-  @SubscribeMessage('vote')
-  async handleVote(
-    @MessageBody('guessId') guessId: string,
-    @MessageBody('userId') userId: string,
-    @MessageBody('voteId', ParseIntPipe) voteId: number,
-    @MessageBody('roundId', ParseIntPipe) roundId: number,
-  ) {
-    await this.guessService.create({ guessId, userId, voteId });
-    const totalVotes = await this.guessService.countByVoteId(voteId);
-    const round = await this.gameService.getRound(roundId);
-    if (totalVotes === round.game.room.users.length) {
-      this.server.emit('userVoted', { roundId });
-    }
   }
 }

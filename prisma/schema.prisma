@@ -14,16 +14,16 @@ datasource db {
 }
 
 model User {
-  id         String  @id @default(uuid())
-  name       String?
-  room       Room?   @relation("users", fields: [roomId], references: [id])
-  roomId     Int?
-  pick       Pick[]
-  guessed    Guess[] @relation("guessed")
-  guesses    Guess[] @relation("guesses")
-  roomHost   Room?   @relation("host")
-  roomHostId Int?
-  Round      Round[]
+  id          String  @id @default(uuid())
+  name        String?
+  room        Room?   @relation("users", fields: [roomId], references: [id])
+  roomId      Int?
+  roomHost    Room?   @relation("host")
+  roomHostId  Int?
+  picks       Pick[]  @relation("pick")
+  guessed     Vote[]  @relation("guessed")
+  guesses     Vote[]  @relation("guesses")
+  themeMaster Round?  @relation("themeMaster")
 }
 
 model Room {
@@ -32,85 +32,46 @@ model Room {
   users  User[] @relation("users")
   host   User   @relation("host", fields: [hostId], references: [id])
   hostId String @unique
-  game   Game?
+  games  Game[]
 }
 
 model Game {
-  id            Int     @id @default(autoincrement())
-  roomId        Int     @unique
-  room          Room    @relation(fields: [roomId], references: [id])
-  isFinished    Boolean @default(false)
-  round         Round[]
-  actualRound   Round?  @relation("actual", fields: [actualRoundId], references: [id])
-  actualRoundId Int?
+  id         Int     @id @default(autoincrement())
+  roomId     Int     @unique
+  room       Room    @relation(fields: [roomId], references: [id])
+  rounds     Round[]
+  isFinished Boolean @default(false)
 }
 
 model Round {
-  id            Int     @id @default(autoincrement())
+  id            Int    @id @default(autoincrement())
   gameId        Int
-  game          Game    @relation(fields: [gameId], references: [id])
-  actualGames   Game[]  @relation("actual")
-  themeId       Int?
-  theme         Theme?  @relation(fields: [themeId], references: [id])
-  isFinished    Boolean @default(false)
-  stepId        Int
-  step          Step    @relation(fields: [stepId], references: [id])
-  pick          Pick[]
-  vote          Vote[]
-  themeMaster   User    @relation(fields: [themeMasterId], references: [id])
-  themeMasterId String
-}
-
-model Theme {
-  id              Int     @id @default(autoincrement())
-  description     String
-  isCreatedByUser Boolean @default(false)
-  round           Round[]
-}
-
-model Song {
-  id     Int    @id @default(autoincrement())
-  title  String
-  artist String
-  url    String
-  pick   Pick[]
-  vote   Vote[]
+  game          Game   @relation(fields: [gameId], references: [id])
+  picks         Pick[]
+  themeMaster   User   @relation("themeMaster", fields: [themeMasterId], references: [id])
+  themeMasterId String @unique
+  theme         String
 }
 
 model Pick {
   id      Int    @id @default(autoincrement())
   round   Round  @relation(fields: [roundId], references: [id])
   roundId Int
-  song    Song   @relation(fields: [songId], references: [id])
-  songId  Int
-  user    User   @relation(fields: [userId], references: [id])
+  song    String
+  user    User   @relation("pick", fields: [userId], references: [id])
   userId  String
+  vote    Vote?
+  voteId  Int?
 
   @@unique([roundId, userId])
 }
 
-model Guess {
-  id            Int    @id @default(autoincrement())
-  vote          Vote   @relation(fields: [voteId], references: [id])
-  voteId        Int
-  guessedUser   User   @relation(fields: [guessedUserId], references: [id], name: "guessed")
-  guessedUserId String
-  guessUser     User   @relation(fields: [guessUserId], references: [id], name: "guesses")
-  guessUserId   String
-}
-
 model Vote {
-  id         Int     @id @default(autoincrement())
-  song       Song    @relation(fields: [songId], references: [id])
-  songId     Int
-  guess      Guess[]
-  isFinished Boolean @default(false)
-  round      Round   @relation(fields: [roundId], references: [id])
-  roundId    Int
-}
-
-model Step {
-  id    Int     @id @default(autoincrement())
-  name  String
-  round Round[]
+  id            Int    @id @default(autoincrement())
+  pick          Pick   @relation(fields: [pickId], references: [id])
+  pickId        Int    @unique
+  guessedUser   User   @relation("guessed", fields: [guessedUserId], references: [id])
+  guessedUserId String
+  guessUser     User   @relation("guesses", fields: [guessUserId], references: [id])
+  guessUserId   String
 }

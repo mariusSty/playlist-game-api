@@ -1,53 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import {
-  AssignSongDto,
-  AssignThemeDto,
-  CreateGameDto,
-} from './dto/create-game.dto';
+import { AssignSongDto } from './dto/create-game.dto';
 
 @Injectable()
 export class GameService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createGameDto: CreateGameDto) {
-    const game = await this.prisma.game.create({
+  create(pin: string, userIds: string[]) {
+    return this.prisma.game.create({
       data: {
         room: {
           connect: {
-            pin: createGameDto.pin,
+            pin,
           },
         },
-        round: {
-          create: {
-            step: {
-              connect: {
-                id: 1,
-              },
-            },
-            themeMaster: {
-              connect: {
-                id: createGameDto.userId,
-              },
-            },
-          },
+        rounds: {
+          create: userIds.map((userId) => ({
+            themeMasterId: userId,
+            theme: '',
+          })),
         },
       },
       include: {
-        round: true,
-      },
-    });
-
-    return this.prisma.game.update({
-      where: {
-        id: game.id,
-      },
-      data: {
-        actualRound: {
-          connect: {
-            id: game.round[0].id,
-          },
-        },
+        rounds: true,
       },
     });
   }
@@ -60,10 +35,9 @@ export class GameService {
         },
       },
       include: {
-        actualRound: {
+        rounds: {
           include: {
             themeMaster: true,
-            theme: true,
           },
         },
       },
@@ -89,57 +63,55 @@ export class GameService {
     });
   }
 
-  assignTheme(assignThemeDto: AssignThemeDto) {
+  updateRound(id: number, theme: string) {
     return this.prisma.round.update({
       where: {
-        id: assignThemeDto.roundId,
+        id,
       },
       data: {
-        themeId: assignThemeDto.themeId,
-      },
-      include: {
-        theme: true,
+        theme,
       },
     });
   }
 
   assignSong(assignSongDto: AssignSongDto) {
-    return this.prisma.pick.upsert({
-      where: {
-        roundId_userId: {
-          roundId: assignSongDto.roundId,
-          userId: assignSongDto.userId,
-        },
-      },
-      update: {
-        song: {
-          update: {
-            title: assignSongDto.song.title,
-            artist: assignSongDto.song.artist,
-            url: assignSongDto.song.url,
-          },
-        },
-      },
-      create: {
-        user: {
-          connect: {
-            id: assignSongDto.userId,
-          },
-        },
-        round: {
-          connect: {
-            id: assignSongDto.roundId,
-          },
-        },
-        song: {
-          create: {
-            title: assignSongDto.song.title,
-            artist: assignSongDto.song.artist,
-            url: assignSongDto.song.url,
-          },
-        },
-      },
-    });
+    console.log(assignSongDto);
+    // return this.prisma.pick.upsert({
+    //   where: {
+    //     roundId_userId: {
+    //       roundId: assignSongDto.roundId,
+    //       userId: assignSongDto.userId,
+    //     },
+    //   },
+    //   update: {
+    //     song: {
+    //       update: {
+    //         title: assignSongDto.song.title,
+    //         artist: assignSongDto.song.artist,
+    //         url: assignSongDto.song.url,
+    //       },
+    //     },
+    //   },
+    //   create: {
+    //     user: {
+    //       connect: {
+    //         id: assignSongDto.userId,
+    //       },
+    //     },
+    //     round: {
+    //       connect: {
+    //         id: assignSongDto.roundId,
+    //       },
+    //     },
+    //     song: {
+    //       create: {
+    //         title: assignSongDto.song.title,
+    //         artist: assignSongDto.song.artist,
+    //         url: assignSongDto.song.url,
+    //       },
+    //     },
+    //   },
+    // });
   }
 
   countUsersValidatedSong(roundId: number) {
@@ -161,39 +133,25 @@ export class GameService {
           },
         },
       },
-      include: {
-        song: true,
-      },
     });
   }
 
-  createVote(songId: number, roundId: number) {
+  createVote(pickId: number, guessedUserId: string, guessUserId: string) {
     return this.prisma.vote.create({
       data: {
-        song: {
+        pick: {
           connect: {
-            id: songId,
+            id: pickId,
           },
         },
-        round: {
+        guessedUser: {
           connect: {
-            id: roundId,
+            id: guessedUserId,
           },
         },
-      },
-    });
-  }
-
-  getFirstVoteNotFinished(roundId: number) {
-    return this.prisma.vote.findFirst({
-      where: {
-        isFinished: false,
-        roundId,
-      },
-      select: {
-        song: {
-          select: {
-            title: true,
+        guessUser: {
+          connect: {
+            id: guessUserId,
           },
         },
       },
