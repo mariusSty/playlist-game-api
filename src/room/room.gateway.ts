@@ -64,10 +64,19 @@ export class RoomGateway {
 
   @SubscribeMessage('validSong')
   async handleValidSong(
-    @MessageBody() data: { roundId: number; song: string; userId: string },
+    @MessageBody()
+    data: {
+      roundId: number;
+      song: string;
+      userId: string;
+      pin: string;
+    },
   ) {
     await this.gameService.assignSong(data);
     const picks = await this.gameService.countPicksByRoundId(data.roundId);
-    this.server.emit('songValidated', { picks });
+    const room = await this.roomService.findOne(data.pin);
+    this.server.emit('songValidated', {
+      allValidated: room.users.length === picks,
+    });
   }
 }
