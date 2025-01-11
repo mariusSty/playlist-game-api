@@ -75,85 +75,36 @@ export class GameService {
   }
 
   assignSong(assignSongDto: AssignSongDto) {
-    console.log(assignSongDto);
-    // return this.prisma.pick.upsert({
-    //   where: {
-    //     roundId_userId: {
-    //       roundId: assignSongDto.roundId,
-    //       userId: assignSongDto.userId,
-    //     },
-    //   },
-    //   update: {
-    //     song: {
-    //       update: {
-    //         title: assignSongDto.song.title,
-    //         artist: assignSongDto.song.artist,
-    //         url: assignSongDto.song.url,
-    //       },
-    //     },
-    //   },
-    //   create: {
-    //     user: {
-    //       connect: {
-    //         id: assignSongDto.userId,
-    //       },
-    //     },
-    //     round: {
-    //       connect: {
-    //         id: assignSongDto.roundId,
-    //       },
-    //     },
-    //     song: {
-    //       create: {
-    //         title: assignSongDto.song.title,
-    //         artist: assignSongDto.song.artist,
-    //         url: assignSongDto.song.url,
-    //       },
-    //     },
-    //   },
-    // });
+    return this.prisma.pick.upsert({
+      where: {
+        roundId_userId: {
+          roundId: Number(assignSongDto.roundId),
+          userId: assignSongDto.userId,
+        },
+      },
+      update: {
+        song: assignSongDto.song,
+      },
+      create: {
+        user: {
+          connect: {
+            id: assignSongDto.userId,
+          },
+        },
+        round: {
+          connect: {
+            id: Number(assignSongDto.roundId),
+          },
+        },
+        song: assignSongDto.song,
+      },
+    });
   }
 
-  countUsersValidatedSong(roundId: number) {
+  countPicksByRoundId(roundId: number) {
     return this.prisma.pick.count({
       where: {
-        roundId,
-      },
-    });
-  }
-
-  getPicks(pin: string) {
-    return this.prisma.pick.findMany({
-      where: {
-        round: {
-          game: {
-            room: {
-              pin,
-            },
-          },
-        },
-      },
-    });
-  }
-
-  createVote(pickId: number, guessedUserId: string, guessUserId: string) {
-    return this.prisma.vote.create({
-      data: {
-        pick: {
-          connect: {
-            id: pickId,
-          },
-        },
-        guessedUser: {
-          connect: {
-            id: guessedUserId,
-          },
-        },
-        guessUser: {
-          connect: {
-            id: guessUserId,
-          },
-        },
+        roundId: Number(roundId),
       },
     });
   }

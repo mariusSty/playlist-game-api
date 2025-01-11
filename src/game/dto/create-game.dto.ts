@@ -10,10 +10,6 @@ export class AssignThemeDto {
 
 export class AssignSongDto {
   roundId: number;
-  song: {
-    title: string;
-    artist: string;
-    url: string;
-  };
+  song: string;
   userId: string;
 }

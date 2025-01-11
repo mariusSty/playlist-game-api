@@ -61,4 +61,13 @@ export class RoomGateway {
     await this.gameService.updateRound(Number(data.roundId), data.theme);
     this.server.emit('themePicked', { roundId: data.roundId });
   }
+
+  @SubscribeMessage('validSong')
+  async handleValidSong(
+    @MessageBody() data: { roundId: number; song: string; userId: string },
+  ) {
+    await this.gameService.assignSong(data);
+    const picks = await this.gameService.countPicksByRoundId(data.roundId);
+    this.server.emit('songValidated', { picks });
+  }
 }
