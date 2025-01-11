@@ -79,4 +79,11 @@ export class RoomGateway {
       allValidated: room.users.length === picks,
     });
   }
+
+  @SubscribeMessage('vote')
+  async handleVote(
+    @MessageBody() data: { pickId: string; guessId: string; userId: string },
+  ) {
+    await this.gameService.createVote(data);
+  }
 }

@@ -125,4 +125,26 @@ export class GameService {
       },
     });
   }
+
+  createVote(data: { pickId: string; guessId: string; userId: string }) {
+    return this.prisma.vote.create({
+      data: {
+        pick: {
+          connect: {
+            id: Number(data.pickId),
+          },
+        },
+        guessedUser: {
+          connect: {
+            id: data.guessId,
+          },
+        },
+        guessUser: {
+          connect: {
+            id: data.userId,
+          },
+        },
+      },
+    });
+  }
 }

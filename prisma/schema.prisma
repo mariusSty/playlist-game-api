@@ -68,9 +68,11 @@ model Pick {
 model Vote {
   id            Int    @id @default(autoincrement())
   pick          Pick   @relation(fields: [pickId], references: [id])
-  pickId        Int    @unique
+  pickId        Int
   guessedUser   User   @relation("guessed", fields: [guessedUserId], references: [id])
   guessedUserId String
   guessUser     User   @relation("guesses", fields: [guessUserId], references: [id])
   guessUserId   String
+
+  @@unique([pickId, guessUserId])
 }
