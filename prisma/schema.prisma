@@ -60,8 +60,7 @@ model Pick {
   song    String
   user    User   @relation("pick", fields: [userId], references: [id])
   userId  String
-  vote    Vote?
-  voteId  Int?
+  votes   Vote[]
 
   @@unique([roundId, userId])
 }

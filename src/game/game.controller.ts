@@ -9,4 +9,9 @@ export class GameController {
   async findOne(@Param('pin') pin: string) {
     return this.gameService.findOne(pin);
   }
+
+  @Get(':pin/votes')
+  async findVote(@Param('pin') pin: string) {
+    return this.gameService.getPickWithoutVotes(pin);
+  }
 }

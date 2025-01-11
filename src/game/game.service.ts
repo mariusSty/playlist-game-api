@@ -108,4 +108,21 @@ export class GameService {
       },
     });
   }
+
+  getPickWithoutVotes(pin: string) {
+    return this.prisma.pick.findFirst({
+      where: {
+        round: {
+          game: {
+            room: {
+              pin,
+            },
+          },
+        },
+        votes: {
+          none: {},
+        },
+      },
+    });
+  }
 }
