@@ -126,6 +126,14 @@ export class GameService {
     });
   }
 
+  getPickById(id: number) {
+    return this.prisma.pick.findUnique({
+      where: {
+        id,
+      },
+    });
+  }
+
   createVote(data: { pickId: string; guessId: string; userId: string }) {
     return this.prisma.vote.create({
       data: {
@@ -144,6 +152,14 @@ export class GameService {
             id: data.userId,
           },
         },
+      },
+    });
+  }
+
+  countVotesByPickId(pickId: number) {
+    return this.prisma.vote.count({
+      where: {
+        pickId,
       },
     });
   }

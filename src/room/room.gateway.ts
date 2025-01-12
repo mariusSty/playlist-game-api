@@ -75,15 +75,36 @@ export class RoomGateway {
     await this.gameService.assignSong(data);
     const picks = await this.gameService.countPicksByRoundId(data.roundId);
     const room = await this.roomService.findOne(data.pin);
-    this.server.emit('songValidated', {
-      allValidated: room.users.length === picks,
-    });
+    const allValidated = room.users.length === picks;
+    if (allValidated) {
+      const pick = await this.gameService.getPickWithoutVotes(data.pin);
+      this.server.emit('songValidated', {
+        pickId: pick.id,
+      });
+    }
   }
 
   @SubscribeMessage('vote')
   async handleVote(
-    @MessageBody() data: { pickId: string; guessId: string; userId: string },
+    @MessageBody()
+    data: {
+      pickId: string;
+      guessId: string;
+      userId: string;
+      pin: string;
+    },
   ) {
     await this.gameService.createVote(data);
+    const votes = await this.gameService.countVotesByPickId(
+      Number(data.pickId),
+    );
+    const room = await this.roomService.findOne(data.pin);
+    const allVoted = room.users.length === votes;
+    if (allVoted) {
+      const pick = await this.gameService.getPickWithoutVotes(data.pin);
+      this.server.emit('voteValidated', {
+        pickId: pick.id,
+      });
+    }
   }
 }
