@@ -50,11 +50,22 @@ export class GameService {
         id,
       },
       include: {
+        themeMaster: true,
         game: {
           include: {
             room: {
               include: {
                 users: true,
+              },
+            },
+          },
+        },
+        picks: {
+          include: {
+            votes: {
+              include: {
+                guessUser: true,
+                guessedUser: true,
               },
             },
           },

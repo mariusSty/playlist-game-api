@@ -103,7 +103,7 @@ export class RoomGateway {
     if (allVoted) {
       const pick = await this.gameService.getPickWithoutVotes(data.pin);
       this.server.emit('voteValidated', {
-        pickId: pick.id,
+        pickId: pick ? pick.id : null,
       });
     }
   }
