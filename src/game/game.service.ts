@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { AssignSongDto } from './dto/create-game.dto';
 
 @Injectable()
 export class GameService {
@@ -40,96 +39,6 @@ export class GameService {
             themeMaster: true,
           },
         },
-      },
-    });
-  }
-
-  assignSong(assignSongDto: AssignSongDto) {
-    return this.prisma.pick.upsert({
-      where: {
-        roundId_userId: {
-          roundId: Number(assignSongDto.roundId),
-          userId: assignSongDto.userId,
-        },
-      },
-      update: {
-        song: assignSongDto.song,
-      },
-      create: {
-        user: {
-          connect: {
-            id: assignSongDto.userId,
-          },
-        },
-        round: {
-          connect: {
-            id: Number(assignSongDto.roundId),
-          },
-        },
-        song: assignSongDto.song,
-      },
-    });
-  }
-
-  countPicksByRoundId(roundId: number) {
-    return this.prisma.pick.count({
-      where: {
-        roundId: Number(roundId),
-      },
-    });
-  }
-
-  getPickWithoutVotes(pin: string) {
-    return this.prisma.pick.findFirst({
-      where: {
-        round: {
-          game: {
-            room: {
-              pin,
-            },
-          },
-        },
-        votes: {
-          none: {},
-        },
-      },
-    });
-  }
-
-  getPickById(id: number) {
-    return this.prisma.pick.findUnique({
-      where: {
-        id,
-      },
-    });
-  }
-
-  createVote(data: { pickId: string; guessId: string; userId: string }) {
-    return this.prisma.vote.create({
-      data: {
-        pick: {
-          connect: {
-            id: Number(data.pickId),
-          },
-        },
-        guessedUser: {
-          connect: {
-            id: data.guessId,
-          },
-        },
-        guessUser: {
-          connect: {
-            id: data.userId,
-          },
-        },
-      },
-    });
-  }
-
-  countVotesByPickId(pickId: number) {
-    return this.prisma.vote.count({
-      where: {
-        pickId,
       },
     });
   }

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { GameService } from './game.service';
 
 @Controller('game')
@@ -8,15 +8,5 @@ export class GameController {
   @Get(':pin')
   async findOne(@Param('pin') pin: string) {
     return this.gameService.findOne(pin);
-  }
-
-  @Get(':pin/votes')
-  async findVote(@Param('pin') pin: string) {
-    return this.gameService.getPickWithoutVotes(pin);
-  }
-
-  @Get('pick/:pickId')
-  async findPick(@Param('pickId', ParseIntPipe) pickId: number) {
-    return this.gameService.getPickById(pickId);
   }
 }

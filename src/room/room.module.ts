@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { GameService } from 'src/game/game.service';
+import { PickService } from 'src/pick/pick.service';
 import { PrismaService } from 'src/prisma.service';
 import { RoundService } from 'src/round/round.service';
 import { UserService } from 'src/user/user.service';
@@ -16,6 +17,7 @@ import { RoomService } from './room.service';
     RoomGateway,
     GameService,
     RoundService,
+    PickService,
   ],
 })
 export class RoomModule {}

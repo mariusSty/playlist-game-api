@@ -6,6 +6,7 @@ import {
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { GameService } from 'src/game/game.service';
+import { PickService } from 'src/pick/pick.service';
 import { RoomService } from 'src/room/room.service';
 import { RoundService } from 'src/round/round.service';
 
@@ -17,6 +18,7 @@ export class RoomGateway {
     private readonly roomService: RoomService,
     private readonly gameService: GameService,
     private readonly roundService: RoundService,
+    private readonly pickService: PickService,
   ) {}
 
   @SubscribeMessage('joinRoom')
@@ -75,12 +77,12 @@ export class RoomGateway {
       pin: string;
     },
   ) {
-    await this.gameService.assignSong(data);
-    const picks = await this.gameService.countPicksByRoundId(data.roundId);
+    await this.pickService.assignSong(data);
+    const picks = await this.pickService.countPicksByRoundId(data.roundId);
     const room = await this.roomService.findOne(data.pin);
     const allValidated = room.users.length === picks;
     if (allValidated) {
-      const pick = await this.gameService.getPickWithoutVotes(data.pin);
+      const pick = await this.pickService.getPickWithoutVotes(data.pin);
       this.server.emit('songValidated', {
         pickId: pick.id,
       });
@@ -97,14 +99,14 @@ export class RoomGateway {
       pin: string;
     },
   ) {
-    await this.gameService.createVote(data);
-    const votes = await this.gameService.countVotesByPickId(
+    await this.pickService.createVote(data);
+    const votes = await this.pickService.countVotesByPickId(
       Number(data.pickId),
     );
     const room = await this.roomService.findOne(data.pin);
     const allVoted = room.users.length === votes;
     if (allVoted) {
-      const pick = await this.gameService.getPickWithoutVotes(data.pin);
+      const pick = await this.pickService.getPickWithoutVotes(data.pin);
       this.server.emit('voteValidated', {
         pickId: pick ? pick.id : null,
       });
