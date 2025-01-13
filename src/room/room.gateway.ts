@@ -52,7 +52,7 @@ export class RoomGateway {
       room.users.map((user) => user.id),
     );
     const round = await this.gameService.getNextRound(data.pin);
-    this.server.emit('gameStarted', { round });
+    this.server.emit('gameStarted', { roundId: round.id });
   }
 
   @SubscribeMessage('pickTheme')
@@ -113,7 +113,7 @@ export class RoomGateway {
   async handleNextRound(@MessageBody() data: { pin: string }) {
     const round = await this.gameService.getNextRound(data.pin);
     if (round) {
-      this.server.emit('newRound', { round });
+      this.server.emit('newRound', { roundId: round.id });
     } else {
       this.server.emit('goToResult');
     }
