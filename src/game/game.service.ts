@@ -74,6 +74,21 @@ export class GameService {
     });
   }
 
+  getNextRound(pin: string) {
+    return this.prisma.round.findFirst({
+      where: {
+        game: {
+          room: {
+            pin,
+          },
+        },
+        theme: {
+          equals: '',
+        },
+      },
+    });
+  }
+
   updateRound(id: number, theme: string) {
     return this.prisma.round.update({
       where: {

@@ -51,7 +51,8 @@ export class RoomGateway {
       data.pin,
       room.users.map((user) => user.id),
     );
-    this.server.emit('gameStarted');
+    const round = await this.gameService.getNextRound(data.pin);
+    this.server.emit('gameStarted', { round });
   }
 
   @SubscribeMessage('pickTheme')
@@ -105,6 +106,16 @@ export class RoomGateway {
       this.server.emit('voteValidated', {
         pickId: pick ? pick.id : null,
       });
+    }
+  }
+
+  @SubscribeMessage('nextRound')
+  async handleNextRound(@MessageBody() data: { pin: string }) {
+    const round = await this.gameService.getNextRound(data.pin);
+    if (round) {
+      this.server.emit('newRound', { round });
+    } else {
+      this.server.emit('goToResult');
     }
   }
 }
