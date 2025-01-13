@@ -7,6 +7,7 @@ import {
 import { Server } from 'socket.io';
 import { GameService } from 'src/game/game.service';
 import { RoomService } from 'src/room/room.service';
+import { RoundService } from 'src/round/round.service';
 
 @WebSocketGateway({ namespace: 'rooms' })
 export class RoomGateway {
@@ -15,6 +16,7 @@ export class RoomGateway {
   constructor(
     private readonly roomService: RoomService,
     private readonly gameService: GameService,
+    private readonly roundService: RoundService,
   ) {}
 
   @SubscribeMessage('joinRoom')
@@ -51,7 +53,7 @@ export class RoomGateway {
       data.pin,
       room.users.map((user) => user.id),
     );
-    const round = await this.gameService.getNextRound(data.pin);
+    const round = await this.roundService.getNext(data.pin);
     this.server.emit('gameStarted', { roundId: round.id });
   }
 
@@ -59,7 +61,7 @@ export class RoomGateway {
   async handlePickTheme(
     @MessageBody() data: { roundId: number; theme: string },
   ) {
-    await this.gameService.updateRound(Number(data.roundId), data.theme);
+    await this.roundService.update(Number(data.roundId), data.theme);
     this.server.emit('themePicked', { roundId: data.roundId });
   }
 
@@ -111,7 +113,7 @@ export class RoomGateway {
 
   @SubscribeMessage('nextRound')
   async handleNextRound(@MessageBody() data: { pin: string }) {
-    const round = await this.gameService.getNextRound(data.pin);
+    const round = await this.roundService.getNext(data.pin);
     if (round) {
       this.server.emit('newRound', { roundId: round.id });
     } else {

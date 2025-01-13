@@ -44,62 +44,6 @@ export class GameService {
     });
   }
 
-  getRound(id: number) {
-    return this.prisma.round.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        themeMaster: true,
-        game: {
-          include: {
-            room: {
-              include: {
-                users: true,
-              },
-            },
-          },
-        },
-        picks: {
-          include: {
-            votes: {
-              include: {
-                guessUser: true,
-                guessedUser: true,
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  getNextRound(pin: string) {
-    return this.prisma.round.findFirst({
-      where: {
-        game: {
-          room: {
-            pin,
-          },
-        },
-        theme: {
-          equals: '',
-        },
-      },
-    });
-  }
-
-  updateRound(id: number, theme: string) {
-    return this.prisma.round.update({
-      where: {
-        id,
-      },
-      data: {
-        theme,
-      },
-    });
-  }
-
   assignSong(assignSongDto: AssignSongDto) {
     return this.prisma.pick.upsert({
       where: {

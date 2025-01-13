@@ -19,9 +19,4 @@ export class GameController {
   async findPick(@Param('pickId', ParseIntPipe) pickId: number) {
     return this.gameService.getPickById(pickId);
   }
-
-  @Get('round/:roundId')
-  async findRound(@Param('roundId', ParseIntPipe) roundId: number) {
-    return this.gameService.getRound(roundId);
-  }
 }
