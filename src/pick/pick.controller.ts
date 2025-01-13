@@ -7,6 +7,6 @@ export class PickController {
 
   @Get(':pickId')
   async findPick(@Param('pickId', ParseIntPipe) pickId: number) {
-    return this.pickService.getPickById(pickId);
+    return this.pickService.getById(pickId);
   }
 }

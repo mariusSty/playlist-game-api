@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { AssignSongDto } from 'src/pick/dto/assign-song.dto';
-import { CreateVoteDto } from 'src/pick/dto/create-vote.dto';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -34,7 +33,7 @@ export class PickService {
     });
   }
 
-  countPicksByRoundId(roundId: number) {
+  countByRoundId(roundId: number) {
     return this.prisma.pick.count({
       where: {
         roundId: Number(roundId),
@@ -42,7 +41,7 @@ export class PickService {
     });
   }
 
-  getPickWithoutVotes(pin: string) {
+  getFirstWithoutVotes(pin: string) {
     return this.prisma.pick.findFirst({
       where: {
         round: {
@@ -59,40 +58,10 @@ export class PickService {
     });
   }
 
-  getPickById(id: number) {
+  getById(id: number) {
     return this.prisma.pick.findUnique({
       where: {
         id,
-      },
-    });
-  }
-
-  createVote(createVoteDto: CreateVoteDto) {
-    return this.prisma.vote.create({
-      data: {
-        pick: {
-          connect: {
-            id: Number(createVoteDto.pickId),
-          },
-        },
-        guessedUser: {
-          connect: {
-            id: createVoteDto.guessId,
-          },
-        },
-        guessUser: {
-          connect: {
-            id: createVoteDto.userId,
-          },
-        },
-      },
-    });
-  }
-
-  countVotesByPickId(pickId: number) {
-    return this.prisma.vote.count({
-      where: {
-        pickId,
       },
     });
   }
