@@ -4,15 +4,15 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Server } from 'socket.io';
+import { Server } from 'http';
 import { GameService } from 'src/game/game.service';
 import { PickService } from 'src/pick/pick.service';
 import { VoteService } from 'src/pick/vote/vote.service';
 import { RoomService } from 'src/room/room.service';
 import { RoundService } from 'src/round/round.service';
 
-@WebSocketGateway({ namespace: 'rooms' })
-export class RoomGateway {
+@WebSocketGateway()
+export class SharedGateway {
   @WebSocketServer() server: Server;
 
   constructor(
