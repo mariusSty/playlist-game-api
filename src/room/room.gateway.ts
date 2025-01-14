@@ -58,7 +58,10 @@ export class RoomGateway {
       room.users.map((user) => user.id),
     );
     const round = await this.roundService.getNext(data.pin);
-    this.server.emit('gameStarted', { roundId: round.id });
+    this.server.emit('gameStarted', {
+      roundId: round.id,
+      gameId: round.gameId,
+    });
   }
 
   @SubscribeMessage('pickTheme')

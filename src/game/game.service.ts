@@ -26,12 +26,10 @@ export class GameService {
     });
   }
 
-  findOne(pin: string) {
+  findOne(id: number) {
     return this.prisma.game.findFirstOrThrow({
       where: {
-        room: {
-          pin,
-        },
+        id,
       },
       include: {
         rounds: {
