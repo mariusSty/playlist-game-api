@@ -65,4 +65,15 @@ export class PickService {
       },
     });
   }
+
+  remove(roundId: number, userId: string) {
+    return this.prisma.pick.delete({
+      where: {
+        roundId_userId: {
+          roundId,
+          userId,
+        },
+      },
+    });
+  }
 }

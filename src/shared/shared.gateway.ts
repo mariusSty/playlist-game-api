@@ -94,6 +94,14 @@ export class SharedGateway {
     }
   }
 
+  @SubscribeMessage('cancelSong')
+  async handleCancelSong(
+    @MessageBody() data: { roundId: string; userId: string; pin: string },
+  ) {
+    await this.pickService.remove(Number(data.roundId), data.userId);
+    this.server.emit('songCanceled');
+  }
+
   @SubscribeMessage('vote')
   async handleVote(
     @MessageBody()
