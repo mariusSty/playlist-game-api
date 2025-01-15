@@ -124,6 +124,14 @@ export class SharedGateway {
     }
   }
 
+  @SubscribeMessage('cancelVote')
+  async handleCancelVote(
+    @MessageBody() data: { pickId: string; userId: string },
+  ) {
+    await this.voteService.remove(Number(data.pickId), data.userId);
+    this.server.emit('voteCanceled');
+  }
+
   @SubscribeMessage('nextRound')
   async handleNextRound(@MessageBody() data: { pin: string }) {
     const round = await this.roundService.getNext(data.pin);

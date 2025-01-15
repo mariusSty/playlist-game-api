@@ -28,6 +28,17 @@ export class VoteService {
     });
   }
 
+  remove(pickId: number, userId: string) {
+    return this.prisma.vote.delete({
+      where: {
+        pickId_guessUserId: {
+          pickId,
+          guessUserId: userId,
+        },
+      },
+    });
+  }
+
   countByPickId(pickId: number) {
     return this.prisma.vote.count({
       where: {
