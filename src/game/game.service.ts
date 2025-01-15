@@ -32,9 +32,19 @@ export class GameService {
         id,
       },
       include: {
+        room: {
+          include: {
+            users: true,
+          },
+        },
         rounds: {
           include: {
             themeMaster: true,
+            picks: {
+              include: {
+                votes: true,
+              },
+            },
           },
         },
       },
