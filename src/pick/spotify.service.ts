@@ -12,13 +12,12 @@ export class SpotifyService {
       this.configService.get('SPOTIFY_CLIENT_SECRET'),
     );
 
-    const result = await spotifySdk.search(
-      search,
-      ['track', 'artist', 'album'],
-      'FR',
-      10,
-    );
+    const result = await spotifySdk.search(search, ['track'], 'FR', 5);
 
-    return result;
+    return result.tracks.items.map((item) => ({
+      id: item.id,
+      title: item.name,
+      artist: item.artists.map((artist) => artist.name),
+    }));
   }
 }
