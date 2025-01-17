@@ -77,12 +77,16 @@ export class SharedGateway {
     @MessageBody()
     data: {
       roundId: number;
-      song: string;
+      track: {
+        id: string;
+        title: string;
+        artists: string;
+      };
       userId: string;
       pin: string;
     },
   ) {
-    await this.pickService.assignSong(data);
+    await this.pickService.assignTrack(data);
     const picks = await this.pickService.countByRoundId(data.roundId);
     const room = await this.roomService.findOne(data.pin);
     const allValidated = room.users.length === picks;

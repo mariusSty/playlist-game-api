@@ -57,7 +57,8 @@ model Pick {
   id      Int    @id @default(autoincrement())
   round   Round  @relation(fields: [roundId], references: [id])
   roundId Int
-  song    String
+  track   Track  @relation(fields: [trackId], references: [id])
+  trackId String
   user    User   @relation("pick", fields: [userId], references: [id])
   userId  String
   votes   Vote[]
@@ -75,4 +76,11 @@ model Vote {
   guessUserId   String
 
   @@unique([pickId, guessUserId])
+}
+
+model Track {
+  id      String @id @default(uuid())
+  title   String
+  artists String
+  Pick    Pick[]
 }

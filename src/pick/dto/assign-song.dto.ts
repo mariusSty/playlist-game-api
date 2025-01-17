@@ -1,5 +1,9 @@
 export class AssignSongDto {
   roundId: number;
-  song: string;
+  track: {
+    id: string;
+    title: string;
+    artists: string;
+  };
   userId: string;
 }

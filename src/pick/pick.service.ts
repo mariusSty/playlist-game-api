@@ -6,7 +6,7 @@ import { PrismaService } from 'src/prisma.service';
 export class PickService {
   constructor(private readonly prisma: PrismaService) {}
 
-  assignSong(assignSongDto: AssignSongDto) {
+  assignTrack(assignSongDto: AssignSongDto) {
     return this.prisma.pick.upsert({
       where: {
         roundId_userId: {
@@ -15,7 +15,18 @@ export class PickService {
         },
       },
       update: {
-        song: assignSongDto.song,
+        track: {
+          connectOrCreate: {
+            where: {
+              id: assignSongDto.track.id,
+            },
+            create: {
+              id: assignSongDto.track.id,
+              title: assignSongDto.track.title,
+              artists: assignSongDto.track.artists,
+            },
+          },
+        },
       },
       create: {
         user: {
@@ -28,7 +39,18 @@ export class PickService {
             id: Number(assignSongDto.roundId),
           },
         },
-        song: assignSongDto.song,
+        track: {
+          connectOrCreate: {
+            where: {
+              id: assignSongDto.track.id,
+            },
+            create: {
+              id: assignSongDto.track.id,
+              title: assignSongDto.track.title,
+              artists: assignSongDto.track.artists,
+            },
+          },
+        },
       },
     });
   }
@@ -62,6 +84,9 @@ export class PickService {
     return this.prisma.pick.findUnique({
       where: {
         id,
+      },
+      include: {
+        track: true,
       },
     });
   }
