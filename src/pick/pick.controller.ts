@@ -1,12 +1,12 @@
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
-import { SpotifyService } from 'src/pick/spotify.service';
+import { MusicApiService } from 'src/pick/musicapi.service';
 import { PickService } from './pick.service';
 
 @Controller('pick')
 export class PickController {
   constructor(
     private readonly pickService: PickService,
-    private readonly spotifyService: SpotifyService,
+    private readonly musicApiService: MusicApiService,
   ) {}
 
   @Get(':pickId')
@@ -16,6 +16,6 @@ export class PickController {
 
   @Get('search/:text')
   search(@Param('text') text: string) {
-    return this.spotifyService.search(text);
+    return this.musicApiService.search(text);
   }
 }

@@ -29,9 +29,6 @@ dependencies:
   '@prisma/client':
     specifier: 5.11.0
     version: 5.11.0(prisma@5.11.0)
-  '@spotify/web-api-ts-sdk':
-    specifier: ^1.2.0
-    version: 1.2.0
   reflect-metadata:
     specifier: ^0.2.0
     version: 0.2.1
@@ -1204,10 +1201,6 @@ packages:
 
   /@socket.io/component-emitter@3.1.2:
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
-
-  /@spotify/web-api-ts-sdk@1.2.0:
-    resolution: {integrity: sha512-JUaebva3Ohwo5I5tuTqyW/FKGOMbb40YevJMySAOINRxP7qQ/AMjBzfJx0zeO6yS+wAPfQSoGNsZaUggHw8vsA==}
-    dev: false
 
   /@tsconfig/node10@1.0.9:
     resolution: {integrity: sha512-jNsYVVxU8v5g43Erja32laIDHXeoNvFEpX33OK4d6hljo3jDhCBDhx5dhCCTMWUojscpAagGiRkBKxpdl9fxqA==}

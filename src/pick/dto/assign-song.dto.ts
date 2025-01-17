@@ -3,7 +3,8 @@ export class AssignSongDto {
   track: {
     id: string;
     title: string;
-    artists: string;
+    artist: string;
+    previewUrl: string;
   };
   userId: string;
 }

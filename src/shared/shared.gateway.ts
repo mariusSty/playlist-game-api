@@ -6,6 +6,7 @@ import {
 } from '@nestjs/websockets';
 import { Server } from 'http';
 import { GameService } from 'src/game/game.service';
+import { AssignSongDto } from 'src/pick/dto/assign-song.dto';
 import { PickService } from 'src/pick/pick.service';
 import { VoteService } from 'src/pick/vote/vote.service';
 import { RoomService } from 'src/room/room.service';
@@ -75,16 +76,7 @@ export class SharedGateway {
   @SubscribeMessage('validSong')
   async handleValidSong(
     @MessageBody()
-    data: {
-      roundId: number;
-      track: {
-        id: string;
-        title: string;
-        artists: string;
-      };
-      userId: string;
-      pin: string;
-    },
+    data: AssignSongDto & { pin: string },
   ) {
     await this.pickService.assignTrack(data);
     const picks = await this.pickService.countByRoundId(data.roundId);

@@ -23,7 +23,8 @@ export class PickService {
             create: {
               id: assignSongDto.track.id,
               title: assignSongDto.track.title,
-              artists: assignSongDto.track.artists,
+              artist: assignSongDto.track.artist,
+              previewUrl: assignSongDto.track.previewUrl,
             },
           },
         },
@@ -47,7 +48,8 @@ export class PickService {
             create: {
               id: assignSongDto.track.id,
               title: assignSongDto.track.title,
-              artists: assignSongDto.track.artists,
+              artist: assignSongDto.track.artist,
+              previewUrl: assignSongDto.track.previewUrl,
             },
           },
         },
