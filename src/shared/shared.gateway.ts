@@ -28,7 +28,11 @@ export class SharedGateway {
   async handleJoinRoom(@MessageBody() data: { pin: string }) {
     const { pin } = data;
     const room = await this.roomService.findOne(pin);
-    this.server.emit('userList', { users: room.users, hostId: room.hostId });
+    this.server.emit('userList', {
+      users: room.users,
+      hostId: room.hostId,
+      pin,
+    });
   }
 
   @SubscribeMessage('leaveRoom')
@@ -62,15 +66,16 @@ export class SharedGateway {
     this.server.emit('gameStarted', {
       roundId: round.id,
       gameId: round.gameId,
+      pin: data.pin,
     });
   }
 
   @SubscribeMessage('pickTheme')
   async handlePickTheme(
-    @MessageBody() data: { roundId: number; theme: string },
+    @MessageBody() data: { roundId: number; theme: string; pin: string },
   ) {
     await this.roundService.update(Number(data.roundId), data.theme);
-    this.server.emit('themePicked', { roundId: data.roundId });
+    this.server.emit('themePicked', { roundId: data.roundId, pin: data.pin });
   }
 
   @SubscribeMessage('validSong')
@@ -86,6 +91,7 @@ export class SharedGateway {
       const pick = await this.pickService.getFirstWithoutVotes(data.pin);
       this.server.emit('songValidated', {
         pickId: pick.id,
+        pin: data.pin,
       });
     }
   }
@@ -95,7 +101,7 @@ export class SharedGateway {
     @MessageBody() data: { roundId: string; userId: string; pin: string },
   ) {
     await this.pickService.remove(Number(data.roundId), data.userId);
-    this.server.emit('songCanceled');
+    this.server.emit('songCanceled', { pin: data.pin });
   }
 
   @SubscribeMessage('vote')
@@ -116,25 +122,26 @@ export class SharedGateway {
       const pick = await this.pickService.getFirstWithoutVotes(data.pin);
       this.server.emit('voteValidated', {
         pickId: pick ? pick.id : null,
+        pin: data.pin,
       });
     }
   }
 
   @SubscribeMessage('cancelVote')
   async handleCancelVote(
-    @MessageBody() data: { pickId: string; userId: string },
+    @MessageBody() data: { pickId: string; userId: string; pin: string },
   ) {
     await this.voteService.remove(Number(data.pickId), data.userId);
-    this.server.emit('voteCanceled');
+    this.server.emit('voteCanceled', { pin: data.pin });
   }
 
   @SubscribeMessage('nextRound')
   async handleNextRound(@MessageBody() data: { pin: string }) {
     const round = await this.roundService.getNext(data.pin);
     if (round) {
-      this.server.emit('newRound', { roundId: round.id });
+      this.server.emit('newRound', { roundId: round.id, pin: data.pin });
     } else {
-      this.server.emit('goToResult');
+      this.server.emit('goToResult', { pin: data.pin });
     }
   }
 }
