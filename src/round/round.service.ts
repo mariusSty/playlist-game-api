@@ -29,6 +29,8 @@ export class RoundService {
                 guessedUser: true,
               },
             },
+            track: true,
+            user: true,
           },
         },
       },
