@@ -52,6 +52,7 @@ export class SharedGateway {
     this.server.emit('userList', {
       users: room.users.filter((user) => user.id !== userId),
       hostId,
+      pin,
     });
   }
 
