@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -39,19 +39,23 @@ export class RoomService {
     });
   }
 
-  connect(pin: string, id: string) {
-    return this.prisma.room.update({
-      where: {
-        pin,
-      },
-      data: {
-        users: {
-          connect: {
-            id,
+  async connect(pin: string, id: string) {
+    try {
+      return await this.prisma.room.update({
+        where: {
+          pin,
+        },
+        data: {
+          users: {
+            connect: {
+              id,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (error) {
+      throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
+    }
   }
 
   disconnect(pin: string, id: string) {

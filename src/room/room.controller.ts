@@ -4,8 +4,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpException,
-  HttpStatus,
   Param,
   Patch,
   Post,
@@ -41,16 +39,12 @@ export class RoomController {
     @Param('pin') pin: string,
     @Body() updateRoomDto: CreateRoomDto,
   ) {
-    try {
-      const { id, name } = updateRoomDto;
-      const user = await this.userService.upsertUser(
-        id,
-        name ? name : faker.animal.cat(),
-      );
-      return this.roomService.connect(pin, user.id);
-    } catch (error) {
-      throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
-    }
+    const { id, name } = updateRoomDto;
+    const user = await this.userService.upsertUser(
+      id,
+      name ? name : faker.animal.cat(),
+    );
+    return this.roomService.connect(pin, user.id);
   }
 
   @Delete(':id')
