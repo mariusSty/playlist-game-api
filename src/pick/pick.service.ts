@@ -57,10 +57,17 @@ export class PickService {
     });
   }
 
-  countByRoundId(roundId: number) {
-    return this.prisma.pick.count({
+  getByRoundId(roundId: number) {
+    return this.prisma.pick.findMany({
       where: {
         roundId: Number(roundId),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
   }

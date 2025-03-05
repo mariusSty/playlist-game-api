@@ -85,14 +85,19 @@ export class SharedGateway {
     data: AssignSongDto & { pin: string },
   ) {
     await this.pickService.assignTrack(data);
-    const picks = await this.pickService.countByRoundId(data.roundId);
+    const picks = await this.pickService.getByRoundId(data.roundId);
     const room = await this.roomService.findOne(data.pin);
-    const allValidated = room.users.length === picks;
+    const allValidated = room.users.length === picks.length;
     if (allValidated) {
       const pick = await this.pickService.getFirstWithoutVotes(data.pin);
-      this.server.emit('songValidated', {
+      this.server.emit('allSongsValidated', {
         pickId: pick.id,
         pin: data.pin,
+      });
+    } else {
+      this.server.emit('songValidated', {
+        pin: data.pin,
+        users: picks.map((pick) => pick.user.id),
       });
     }
   }
@@ -102,7 +107,11 @@ export class SharedGateway {
     @MessageBody() data: { roundId: string; userId: string; pin: string },
   ) {
     await this.pickService.remove(Number(data.roundId), data.userId);
-    this.server.emit('songCanceled', { pin: data.pin });
+    const picks = await this.pickService.getByRoundId(Number(data.roundId));
+    this.server.emit('songCanceled', {
+      pin: data.pin,
+      users: picks.map((pick) => pick.user.id),
+    });
   }
 
   @SubscribeMessage('vote')
