@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 
@@ -6,23 +5,28 @@ import { PrismaService } from 'src/prisma.service';
 export class RoomService {
   constructor(private prisma: PrismaService) {}
 
-  create(id: string) {
+  create(userId: string, pin: string) {
     return this.prisma.room.create({
       data: {
-        pin: faker.number
-          .int({ min: 0, max: 9999 })
-          .toString()
-          .padStart(4, '0'),
+        pin,
         users: {
           connect: {
-            id,
+            id: userId,
           },
         },
         host: {
           connect: {
-            id,
+            id: userId,
           },
         },
+      },
+    });
+  }
+
+  findIfExists(pin: string) {
+    return this.prisma.room.findUnique({
+      where: {
+        pin,
       },
     });
   }

@@ -26,7 +26,14 @@ export class RoomController {
       id,
       name ? name : faker.animal.cat(),
     );
-    return this.roomService.create(user.id);
+
+    let exists = true;
+    let pin: string;
+    while (exists) {
+      pin = Math.floor(100000 + Math.random() * 900000).toString();
+      exists = !!(await this.roomService.findIfExists(pin));
+    }
+    return this.roomService.create(user.id, pin);
   }
 
   @Get(':pin')
