@@ -39,10 +39,13 @@ export class VoteService {
     });
   }
 
-  countByPickId(pickId: number) {
-    return this.prisma.vote.count({
+  getByPickId(pickId: number) {
+    return this.prisma.vote.findMany({
       where: {
         pickId,
+      },
+      include: {
+        guessedUser: true,
       },
     });
   }

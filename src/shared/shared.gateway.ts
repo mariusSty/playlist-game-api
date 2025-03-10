@@ -125,14 +125,19 @@ export class SharedGateway {
     },
   ) {
     await this.voteService.create(data);
-    const votes = await this.voteService.countByPickId(Number(data.pickId));
+    const votes = await this.voteService.getByPickId(Number(data.pickId));
     const room = await this.roomService.findOne(data.pin);
-    const allVoted = room.users.length === votes;
+    const allVoted = room.users.length === votes.length;
     if (allVoted) {
       const pick = await this.pickService.getFirstWithoutVotes(data.pin);
-      this.server.emit('voteValidated', {
+      this.server.emit('allVotesValidated', {
         pickId: pick ? pick.id : null,
         pin: data.pin,
+      });
+    } else {
+      this.server.emit('voteValidated', {
+        pin: data.pin,
+        users: votes.map((vote) => vote.guessedUser.id),
       });
     }
   }
@@ -142,7 +147,11 @@ export class SharedGateway {
     @MessageBody() data: { pickId: string; userId: string; pin: string },
   ) {
     await this.voteService.remove(Number(data.pickId), data.userId);
-    this.server.emit('voteCanceled', { pin: data.pin });
+    const votes = await this.voteService.getByPickId(Number(data.pickId));
+    this.server.emit('voteCanceled', {
+      pin: data.pin,
+      users: votes.map((vote) => vote.guessedUser.id),
+    });
   }
 
   @SubscribeMessage('nextRound')
