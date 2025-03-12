@@ -20,8 +20,7 @@ CREATE TABLE "Room" (
 -- CreateTable
 CREATE TABLE "Game" (
     "id" SERIAL NOT NULL,
-    "roomId" INTEGER NOT NULL,
-    "isFinished" BOOLEAN NOT NULL DEFAULT false,
+    "roomId" INTEGER,
 
     CONSTRAINT "Game_pkey" PRIMARY KEY ("id")
 );
@@ -64,6 +63,12 @@ CREATE TABLE "Track" (
     "previewUrl" TEXT NOT NULL
 );
 
+-- CreateTable
+CREATE TABLE "_GameToUser" (
+    "A" INTEGER NOT NULL,
+    "B" TEXT NOT NULL
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Room_pin_key" ON "Room"("pin");
 
@@ -79,6 +84,12 @@ CREATE UNIQUE INDEX "Vote_pickId_guessUserId_key" ON "Vote"("pickId", "guessUser
 -- CreateIndex
 CREATE UNIQUE INDEX "Track_id_key" ON "Track"("id");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "_GameToUser_AB_unique" ON "_GameToUser"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_GameToUser_B_index" ON "_GameToUser"("B");
+
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_roomId_fkey" FOREIGN KEY ("roomId") REFERENCES "Room"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -86,7 +97,7 @@ ALTER TABLE "User" ADD CONSTRAINT "User_roomId_fkey" FOREIGN KEY ("roomId") REFE
 ALTER TABLE "Room" ADD CONSTRAINT "Room_hostId_fkey" FOREIGN KEY ("hostId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Game" ADD CONSTRAINT "Game_roomId_fkey" FOREIGN KEY ("roomId") REFERENCES "Room"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Game" ADD CONSTRAINT "Game_roomId_fkey" FOREIGN KEY ("roomId") REFERENCES "Room"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Round" ADD CONSTRAINT "Round_gameId_fkey" FOREIGN KEY ("gameId") REFERENCES "Game"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -111,3 +122,9 @@ ALTER TABLE "Vote" ADD CONSTRAINT "Vote_guessedUserId_fkey" FOREIGN KEY ("guesse
 
 -- AddForeignKey
 ALTER TABLE "Vote" ADD CONSTRAINT "Vote_guessUserId_fkey" FOREIGN KEY ("guessUserId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_GameToUser" ADD CONSTRAINT "_GameToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Game"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_GameToUser" ADD CONSTRAINT "_GameToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

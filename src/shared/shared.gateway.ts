@@ -155,11 +155,13 @@ export class SharedGateway {
   }
 
   @SubscribeMessage('nextRound')
-  async handleNextRound(@MessageBody() data: { pin: string }) {
+  async handleNextRound(@MessageBody() data: { pin: string; gameId: string }) {
     const round = await this.roundService.getNext(data.pin);
     if (round) {
       this.server.emit('newRound', { roundId: round.id, pin: data.pin });
     } else {
+      console.log('sset', data);
+      await this.gameService.detachRoom(+data.gameId);
       this.server.emit('goToResult', { pin: data.pin });
     }
   }

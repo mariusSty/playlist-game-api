@@ -13,7 +13,7 @@ export class GameController {
   @Get(':id/result')
   async findResult(@Param('id', ParseIntPipe) id: number) {
     const game = await this.gameService.findOne(id);
-    const result = game.room.users.map((user) => {
+    const result = game.users.map((user) => {
       return {
         user,
         score: 0,

@@ -24,6 +24,7 @@ model User {
   guessed      Vote[]  @relation("guessed")
   guesses      Vote[]  @relation("guesses")
   themeMasters Round[] @relation("themeMaster")
+  games        Game[]
 }
 
 model Room {
@@ -36,11 +37,11 @@ model Room {
 }
 
 model Game {
-  id         Int     @id @default(autoincrement())
-  roomId     Int
-  room       Room    @relation(fields: [roomId], references: [id])
-  rounds     Round[]
-  isFinished Boolean @default(false)
+  id     Int     @id @default(autoincrement())
+  roomId Int?
+  room   Room?   @relation(fields: [roomId], references: [id])
+  rounds Round[]
+  users  User[]
 }
 
 model Round {

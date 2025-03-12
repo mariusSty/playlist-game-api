@@ -19,6 +19,9 @@ export class GameService {
             theme: '',
           })),
         },
+        users: {
+          connect: userIds.map((userId) => ({ id: userId })),
+        },
       },
       include: {
         rounds: true,
@@ -32,11 +35,7 @@ export class GameService {
         id,
       },
       include: {
-        room: {
-          include: {
-            users: true,
-          },
-        },
+        users: true,
         rounds: {
           include: {
             themeMaster: true,
@@ -47,6 +46,17 @@ export class GameService {
             },
           },
         },
+      },
+    });
+  }
+
+  detachRoom(id: number) {
+    return this.prisma.game.update({
+      data: {
+        roomId: null,
+      },
+      where: {
+        id,
       },
     });
   }
