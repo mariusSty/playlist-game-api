@@ -1,10 +1,12 @@
 import {
+  ConnectedSocket,
   MessageBody,
+  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Server } from 'http';
+import { Server, Socket } from 'socket.io';
 import { GameService } from 'src/game/game.service';
 import { AssignSongDto } from 'src/pick/dto/assign-song.dto';
 import { PickService } from 'src/pick/pick.service';
@@ -13,7 +15,7 @@ import { RoomService } from 'src/room/room.service';
 import { RoundService } from 'src/round/round.service';
 
 @WebSocketGateway()
-export class SharedGateway {
+export class SharedGateway implements OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
   constructor(
@@ -24,11 +26,19 @@ export class SharedGateway {
     private readonly voteService: VoteService,
   ) {}
 
+  async handleDisconnect(client: Socket) {
+    // Socket.IO rooms are cleaned up automatically on disconnect
+  }
+
   @SubscribeMessage('joinRoom')
-  async handleJoinRoom(@MessageBody() data: { pin: string }) {
+  async handleJoinRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { pin: string },
+  ) {
     const { pin } = data;
+    client.join(pin);
     const room = await this.roomService.findOne(pin);
-    this.server.emit('userList', {
+    this.server.to(pin).emit('userList', {
       users: room.users,
       hostId: room.hostId,
       pin,
@@ -36,11 +46,15 @@ export class SharedGateway {
   }
 
   @SubscribeMessage('leaveRoom')
-  async handleLeaveRoom(@MessageBody() data: { pin: string; userId: string }) {
+  async handleLeaveRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { pin: string; userId: string },
+  ) {
     const { pin, userId } = data;
     const room = await this.roomService.findOne(pin);
     let hostId = room.hostId;
     if (room.users.length === 1) {
+      client.leave(pin);
       return this.roomService.remove(room.id);
     }
     if (room.hostId === userId) {
@@ -49,7 +63,8 @@ export class SharedGateway {
       hostId = newHostId;
     }
     await this.roomService.disconnect(pin, userId);
-    this.server.emit('userList', {
+    client.leave(pin);
+    this.server.to(pin).emit('userList', {
       users: room.users.filter((user) => user.id !== userId),
       hostId,
       pin,
@@ -64,7 +79,7 @@ export class SharedGateway {
       room.users.map((user) => user.id),
     );
     const round = await this.roundService.getNext(data.pin);
-    this.server.emit('gameStarted', {
+    this.server.to(data.pin).emit('gameStarted', {
       roundId: round.id,
       gameId: round.gameId,
       pin: data.pin,
@@ -76,7 +91,9 @@ export class SharedGateway {
     @MessageBody() data: { roundId: number; theme: string; pin: string },
   ) {
     await this.roundService.update(Number(data.roundId), data.theme);
-    this.server.emit('themePicked', { roundId: data.roundId, pin: data.pin });
+    this.server
+      .to(data.pin)
+      .emit('themePicked', { roundId: data.roundId, pin: data.pin });
   }
 
   @SubscribeMessage('validSong')
@@ -92,12 +109,12 @@ export class SharedGateway {
     const allValidated = room.users.length === picks.length;
     if (allValidated) {
       const pick = await this.pickService.getFirstWithoutVotes(data.pin);
-      this.server.emit('allSongsValidated', {
+      this.server.to(data.pin).emit('allSongsValidated', {
         pickId: pick.id,
         pin: data.pin,
       });
     } else {
-      this.server.emit('songValidated', {
+      this.server.to(data.pin).emit('songValidated', {
         pin: data.pin,
         users: picks.map((pick) => pick.user.id),
       });
@@ -110,7 +127,7 @@ export class SharedGateway {
   ) {
     await this.pickService.remove(Number(data.roundId), data.userId);
     const picks = await this.pickService.getByRoundId(Number(data.roundId));
-    this.server.emit('songCanceled', {
+    this.server.to(data.pin).emit('songCanceled', {
       pin: data.pin,
       users: picks.map((pick) => pick.user.id),
     });
@@ -134,12 +151,12 @@ export class SharedGateway {
     const allVoted = room.users.length === votes.length;
     if (allVoted) {
       const pick = await this.pickService.getFirstWithoutVotes(data.pin);
-      this.server.emit('allVotesValidated', {
+      this.server.to(data.pin).emit('allVotesValidated', {
         pickId: pick ? pick.id : null,
         pin: data.pin,
       });
     } else {
-      this.server.emit('voteValidated', {
+      this.server.to(data.pin).emit('voteValidated', {
         pin: data.pin,
         users: votes.map((vote) => vote.guessedUser.id),
       });
@@ -152,7 +169,7 @@ export class SharedGateway {
   ) {
     await this.voteService.remove(Number(data.pickId), data.userId);
     const votes = await this.voteService.getByPickId(Number(data.pickId));
-    this.server.emit('voteCanceled', {
+    this.server.to(data.pin).emit('voteCanceled', {
       pin: data.pin,
       users: votes.map((vote) => vote.guessedUser.id),
     });
@@ -162,10 +179,12 @@ export class SharedGateway {
   async handleNextRound(@MessageBody() data: { pin: string; gameId: string }) {
     const round = await this.roundService.getNext(data.pin);
     if (round) {
-      this.server.emit('newRound', { roundId: round.id, pin: data.pin });
+      this.server
+        .to(data.pin)
+        .emit('newRound', { roundId: round.id, pin: data.pin });
     } else {
       await this.gameService.detachRoom(+data.gameId);
-      this.server.emit('goToResult', { pin: data.pin });
+      this.server.to(data.pin).emit('goToResult', { pin: data.pin });
     }
   }
 }
