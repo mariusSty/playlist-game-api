@@ -27,6 +27,11 @@ export class RoomController {
       name ? name : faker.animal.cat(),
     );
 
+    const existingRoom = await this.roomService.findByHostId(user.id);
+    if (existingRoom) {
+      return existingRoom;
+    }
+
     let exists = true;
     let pin: string;
     while (exists) {

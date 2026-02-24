@@ -5,6 +5,18 @@ import { PrismaService } from 'src/prisma.service';
 export class RoomService {
   constructor(private prisma: PrismaService) {}
 
+  findByHostId(hostId: string) {
+    return this.prisma.client.room.findUnique({
+      where: {
+        hostId,
+      },
+      include: {
+        users: true,
+        host: true,
+      },
+    });
+  }
+
   create(userId: string, pin: string) {
     return this.prisma.client.room.create({
       data: {
