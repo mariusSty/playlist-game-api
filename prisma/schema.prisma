@@ -25,6 +25,8 @@ model User {
   guesses      Vote[]  @relation("guesses")
   themeMasters Round[] @relation("themeMaster")
   games        Game[]
+
+  @@index([roomId])
 }
 
 model Room {
@@ -42,6 +44,8 @@ model Game {
   room   Room?   @relation(fields: [roomId], references: [id])
   rounds Round[]
   users  User[]
+
+  @@index([roomId])
 }
 
 model Round {
@@ -52,6 +56,9 @@ model Round {
   themeMaster   User   @relation("themeMaster", fields: [themeMasterId], references: [id])
   themeMasterId String
   theme         String
+
+  @@index([gameId])
+  @@index([themeMasterId])
 }
 
 model Pick {
@@ -65,6 +72,9 @@ model Pick {
   votes   Vote[]
 
   @@unique([roundId, userId])
+  @@index([roundId])
+  @@index([trackId])
+  @@index([userId])
 }
 
 model Vote {
@@ -77,6 +87,9 @@ model Vote {
   guessUserId   String
 
   @@unique([pickId, guessUserId])
+  @@index([pickId])
+  @@index([guessedUserId])
+  @@index([guessUserId])
 }
 
 model Track {

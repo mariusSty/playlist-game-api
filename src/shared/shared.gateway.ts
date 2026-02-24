@@ -85,8 +85,10 @@ export class SharedGateway {
     data: AssignSongDto & { pin: string },
   ) {
     await this.pickService.assignTrack(data);
-    const picks = await this.pickService.getByRoundId(data.roundId);
-    const room = await this.roomService.findOne(data.pin);
+    const [picks, room] = await Promise.all([
+      this.pickService.getByRoundId(data.roundId),
+      this.roomService.findOne(data.pin),
+    ]);
     const allValidated = room.users.length === picks.length;
     if (allValidated) {
       const pick = await this.pickService.getFirstWithoutVotes(data.pin);
@@ -125,8 +127,10 @@ export class SharedGateway {
     },
   ) {
     await this.voteService.create(data);
-    const votes = await this.voteService.getByPickId(Number(data.pickId));
-    const room = await this.roomService.findOne(data.pin);
+    const [votes, room] = await Promise.all([
+      this.voteService.getByPickId(Number(data.pickId)),
+      this.roomService.findOne(data.pin),
+    ]);
     const allVoted = room.users.length === votes.length;
     if (allVoted) {
       const pick = await this.pickService.getFirstWithoutVotes(data.pin);
@@ -160,7 +164,6 @@ export class SharedGateway {
     if (round) {
       this.server.emit('newRound', { roundId: round.id, pin: data.pin });
     } else {
-      console.log('sset', data);
       await this.gameService.detachRoom(+data.gameId);
       this.server.emit('goToResult', { pin: data.pin });
     }
