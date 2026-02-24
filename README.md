@@ -1,73 +1,221 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# 🎵 SoundGuess API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> _Pas besoin de connaître la musique. Il faut connaître les gens._
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Backend temps réel pour **SoundGuess**, un jeu mobile multijoueur où chaque manche pose un thème, chaque joueur choisit une chanson anonymement, et les autres doivent deviner qui a choisi quoi.
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 🏗️ Stack technique
 
-## Installation
+| Couche               | Technologie                                                             |
+| -------------------- | ----------------------------------------------------------------------- |
+| **Framework**        | [NestJS](https://nestjs.com/) v11                                       |
+| **Langage**          | TypeScript 5.9                                                          |
+| **Runtime**          | Node.js 18                                                              |
+| **Base de données**  | PostgreSQL (via [Prisma](https://www.prisma.io/) 7 + Prisma Accelerate) |
+| **Temps réel**       | WebSockets ([Socket.IO](https://socket.io/) 4)                          |
+| **API musicale**     | [Deezer API](https://developers.deezer.com/) (extraits 30s)             |
+| **Package manager**  | pnpm                                                                    |
+| **Conteneurisation** | Docker (multi-stage build)                                              |
 
-```bash
-$ pnpm install
-```
+---
 
-## Running the app
+## 📦 Prérequis
+
+- **Node.js** >= 18
+- **pnpm** >= 8
+- **PostgreSQL** (ou une instance Prisma Accelerate)
+
+---
+
+## 🚀 Installation
 
 ```bash
-# development
-$ pnpm run start
+# Cloner le repo
+git clone <repo-url>
+cd playlist-game-api
 
-# watch mode
-$ pnpm run start:dev
+# Installer les dépendances
+pnpm install
 
-# production mode
-$ pnpm run start:prod
+# Configurer les variables d'environnement
+cp .env.example .env
 ```
 
-## Test
+### Variables d'environnement
+
+| Variable              | Description                                                       |
+| --------------------- | ----------------------------------------------------------------- |
+| `DATABASE_URL`        | URL de connexion Prisma Accelerate                                |
+| `DIRECT_DATABASE_URL` | URL de connexion directe PostgreSQL (utilisée par les migrations) |
+
+### Base de données
 
 ```bash
-# unit tests
-$ pnpm run test
+# Générer le client Prisma
+npx prisma generate
 
-# e2e tests
-$ pnpm run test:e2e
+# Appliquer les migrations
+npx prisma migrate dev
 
-# test coverage
-$ pnpm run test:cov
+# (Optionnel) Seed de la base
+pnpm dlx tsx prisma/seed.ts
 ```
 
-## Support
+---
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## ▶️ Lancer le serveur
 
-## Stay in touch
+```bash
+# Développement (watch mode)
+pnpm start:dev
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+# Debug
+pnpm start:debug
 
-## License
+# Production
+pnpm build && pnpm start:prod
+```
 
-Nest is [MIT licensed](LICENSE).
+Le serveur démarre sur `http://localhost:3000`.
+
+---
+
+## 🐳 Docker
+
+```bash
+docker build -t soundguess-api .
+docker run -p 3000:3000 --env-file .env soundguess-api
+```
+
+---
+
+## 🧪 Tests
+
+```bash
+pnpm test            # Tests unitaires
+pnpm test:watch      # Mode watch
+pnpm test:cov        # Couverture de code
+pnpm test:e2e        # Tests end-to-end
+```
+
+---
+
+## 🗄️ Modèle de données
+
+```
+User ──┬── Room (host)
+       ├── Room (member)
+       ├── Game
+       ├── Round (themeMaster)
+       ├── Pick
+       └── Vote (guessUser / guessedUser)
+
+Room ──── Game ──── Round ──── Pick ──── Vote
+                                │
+                              Track
+```
+
+| Modèle    | Rôle                                                      |
+| --------- | --------------------------------------------------------- |
+| **User**  | Joueur identifié par UUID, nom optionnel                  |
+| **Room**  | Salon avec PIN à 6 chiffres, un hôte, plusieurs joueurs   |
+| **Game**  | Partie liée à un salon, contient N manches (1 par joueur) |
+| **Round** | Manche avec un thème et un meneur (_themeMaster_)         |
+| **Pick**  | Choix d'une chanson par un joueur pour une manche         |
+| **Track** | Chanson (id Deezer, titre, artiste, URL de preview)       |
+| **Vote**  | Guess d'un joueur sur l'auteur d'un pick                  |
+
+---
+
+## 🔌 API REST
+
+| Méthode  | Endpoint             | Description                                 |
+| -------- | -------------------- | ------------------------------------------- |
+| `POST`   | `/room`              | Créer un salon (génère un PIN à 6 chiffres) |
+| `GET`    | `/room/:pin`         | Récupérer un salon par PIN                  |
+| `PATCH`  | `/room/:pin`         | Rejoindre un salon                          |
+| `DELETE` | `/room/:id`          | Supprimer un salon                          |
+| `GET`    | `/game/:id`          | Récupérer une partie                        |
+| `GET`    | `/game/:id/result`   | Classement final (scores)                   |
+| `GET`    | `/round/:roundId`    | Détails d'une manche                        |
+| `GET`    | `/pick/:pickId`      | Détails d'un pick                           |
+| `GET`    | `/pick/search/:text` | Rechercher une chanson (Deezer API)         |
+
+---
+
+## 📡 WebSocket Events
+
+Toute la logique temps réel passe par un gateway Socket.IO unique.
+
+### Events client → serveur
+
+| Event        | Payload                            | Description                   |
+| ------------ | ---------------------------------- | ----------------------------- |
+| `joinRoom`   | `{ pin }`                          | Rejoindre un salon            |
+| `leaveRoom`  | `{ pin, userId }`                  | Quitter un salon              |
+| `startGame`  | `{ pin, userId }`                  | Lancer la partie (hôte)       |
+| `pickTheme`  | `{ roundId, theme, pin }`          | Choisir le thème de la manche |
+| `validSong`  | `{ roundId, userId, track, pin }`  | Valider son choix de chanson  |
+| `cancelSong` | `{ roundId, userId, pin }`         | Annuler son choix             |
+| `vote`       | `{ pickId, guessId, userId, pin }` | Voter pour un joueur          |
+| `cancelVote` | `{ pickId, userId, pin }`          | Annuler son vote              |
+| `nextRound`  | `{ pin, gameId }`                  | Passer à la manche suivante   |
+
+### Events serveur → client
+
+| Event               | Payload                    | Description                                 |
+| ------------------- | -------------------------- | ------------------------------------------- |
+| `userList`          | `{ users, hostId, pin }`   | Liste des joueurs mise à jour               |
+| `gameStarted`       | `{ roundId, gameId, pin }` | La partie a démarré                         |
+| `themePicked`       | `{ roundId, pin }`         | Le thème a été choisi                       |
+| `songValidated`     | `{ pin, users }`           | Un joueur a validé sa chanson               |
+| `allSongsValidated` | `{ pickId, pin }`          | Tous les joueurs ont validé → phase de vote |
+| `voteValidated`     | `{ pin, users }`           | Un vote enregistré                          |
+| `allVotesValidated` | `{ pickId, pin }`          | Tous les votes enregistrés pour un pick     |
+| `voteCanceled`      | `{ pin, users }`           | Un vote annulé                              |
+| `songCanceled`      | `{ pin, users }`           | Un choix de chanson annulé                  |
+| `newRound`          | `{ roundId, pin }`         | Nouvelle manche                             |
+| `goToResult`        | `{ pin }`                  | Fin de partie → afficher les résultats      |
+
+---
+
+## 📁 Structure du projet
+
+```
+src/
+├── main.ts                  # Bootstrap NestJS (port 3000, CORS activé)
+├── app.module.ts            # Module racine
+├── prisma.service.ts        # Client Prisma (Accelerate)
+├── shared/
+│   └── shared.gateway.ts    # Gateway WebSocket (toute la logique temps réel)
+├── room/                    # Module Room (CRUD salon)
+├── game/                    # Module Game (création partie + résultats)
+├── round/                   # Module Round (manches)
+├── pick/                    # Module Pick (choix de chanson + recherche Deezer)
+│   └── vote/                # Service Vote
+├── user/                    # Service User (upsert)
+└── generated/prisma/        # Client Prisma généré
+prisma/
+├── schema.prisma            # Schéma de données
+├── seed.ts                  # Script de seed
+└── migrations/              # Migrations SQL
+```
+
+---
+
+## 🕹️ Déroulement d'une partie
+
+1. **Création du salon** — Un joueur crée un salon (`POST /room`), un PIN à 6 chiffres est généré. Les autres rejoignent via le PIN.
+2. **Lancement** — L'hôte émet `startGame`. Une `Game` est créée avec autant de `Round` que de joueurs (chacun sera _themeMaster_ une fois).
+3. **Phase thème** — Le meneur émet `pickTheme` avec le thème de son choix.
+4. **Phase sélection** — Chaque joueur recherche une chanson (`GET /pick/search/:text`) puis valide (`validSong`). Quand tout le monde a validé, le serveur émet `allSongsValidated`.
+5. **Phase vote** — Les extraits sont joués un par un. Pour chaque pick, les joueurs votent (`vote`). À chaque pick complété, le serveur passe au suivant ou termine la manche.
+6. **Manche suivante / Fin** — `nextRound` passe à la manche suivante. Quand toutes les manches sont jouées, `goToResult` est émis et les scores sont disponibles via `GET /game/:id/result`.
+
+---
+
+## 📄 Licence
+
+Projet privé — UNLICENSED
