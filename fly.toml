@@ -1,5 +1,5 @@
 # Voir https://fly.io/docs/reference/configuration/
-app = "playlist-game-api-staging"
+app = "playlist-game-api"
 primary_region = "jnb" # Johannesburg (plus proche de La Réunion)
 
 [build]
