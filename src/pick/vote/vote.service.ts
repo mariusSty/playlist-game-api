@@ -7,7 +7,7 @@ export class VoteService {
   constructor(private readonly prisma: PrismaService) {}
 
   create(createVoteDto: CreateVoteDto) {
-    return this.prisma.vote.create({
+    return this.prisma.client.vote.create({
       data: {
         pick: {
           connect: {
@@ -29,7 +29,7 @@ export class VoteService {
   }
 
   remove(pickId: number, userId: string) {
-    return this.prisma.vote.delete({
+    return this.prisma.client.vote.delete({
       where: {
         pickId_guessUserId: {
           pickId,
@@ -40,13 +40,14 @@ export class VoteService {
   }
 
   getByPickId(pickId: number) {
-    return this.prisma.vote.findMany({
+    return this.prisma.client.vote.findMany({
       where: {
         pickId,
       },
       include: {
         guessedUser: true,
       },
+      cacheStrategy: { swr: 10, ttl: 10 },
     });
   }
 }

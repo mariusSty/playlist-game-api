@@ -6,7 +6,7 @@ export class RoomService {
   constructor(private prisma: PrismaService) {}
 
   create(userId: string, pin: string) {
-    return this.prisma.room.create({
+    return this.prisma.client.room.create({
       data: {
         pin,
         users: {
@@ -24,15 +24,16 @@ export class RoomService {
   }
 
   findIfExists(pin: string) {
-    return this.prisma.room.findUnique({
+    return this.prisma.client.room.findUnique({
       where: {
         pin,
       },
+      cacheStrategy: { swr: 10, ttl: 10 },
     });
   }
 
   findOne(pin: string) {
-    return this.prisma.room.findUniqueOrThrow({
+    return this.prisma.client.room.findUniqueOrThrow({
       where: {
         pin,
       },
@@ -40,12 +41,13 @@ export class RoomService {
         users: true,
         host: true,
       },
+      cacheStrategy: { swr: 15, ttl: 15 },
     });
   }
 
   async connect(pin: string, id: string) {
     try {
-      return await this.prisma.room.update({
+      return await this.prisma.client.room.update({
         where: {
           pin,
         },
@@ -63,7 +65,7 @@ export class RoomService {
   }
 
   disconnect(pin: string, id: string) {
-    return this.prisma.room.update({
+    return this.prisma.client.room.update({
       where: {
         pin,
       },
@@ -78,7 +80,7 @@ export class RoomService {
   }
 
   updateHost(pin: string, hostId: string) {
-    return this.prisma.room.update({
+    return this.prisma.client.room.update({
       where: {
         pin,
       },
@@ -89,7 +91,7 @@ export class RoomService {
   }
 
   remove(id: number) {
-    return this.prisma.room.delete({
+    return this.prisma.client.room.delete({
       where: {
         id,
       },

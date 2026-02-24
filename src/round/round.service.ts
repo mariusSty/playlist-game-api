@@ -6,7 +6,7 @@ export class RoundService {
   constructor(private prisma: PrismaService) {}
 
   get(id: number) {
-    return this.prisma.round.findUnique({
+    return this.prisma.client.round.findUnique({
       where: {
         id,
       },
@@ -34,11 +34,12 @@ export class RoundService {
           },
         },
       },
+      cacheStrategy: { swr: 15, ttl: 15 },
     });
   }
 
   getNext(pin: string) {
-    return this.prisma.round.findFirst({
+    return this.prisma.client.round.findFirst({
       where: {
         game: {
           room: {
@@ -53,7 +54,7 @@ export class RoundService {
   }
 
   update(id: number, theme: string) {
-    return this.prisma.round.update({
+    return this.prisma.client.round.update({
       where: {
         id,
       },

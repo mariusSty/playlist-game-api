@@ -1,18 +1,18 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { withAccelerate } from '@prisma/extension-accelerate';
 import { PrismaClient } from './generated/prisma/client';
 
-const pool = new Pool({ connectionString: process.env.DIRECT_DATABASE_URL });
-const adapter = new PrismaPg(pool);
+const basePrisma = new PrismaClient({
+  accelerateUrl: process.env.DATABASE_URL,
+}).$extends(withAccelerate());
+
+export type AcceleratedPrismaClient = typeof basePrisma;
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit {
-  constructor() {
-    super({ adapter });
-  }
+export class PrismaService implements OnModuleInit {
+  readonly client: AcceleratedPrismaClient = basePrisma;
 
   async onModuleInit() {
-    await this.$connect();
+    await this.client.$connect();
   }
 }

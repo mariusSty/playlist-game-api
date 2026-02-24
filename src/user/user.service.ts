@@ -6,7 +6,7 @@ export class UserService {
   constructor(private prisma: PrismaService) {}
 
   upsertUser(id: string, name: string) {
-    return this.prisma.user.upsert({
+    return this.prisma.client.user.upsert({
       where: {
         id,
       },

@@ -7,7 +7,7 @@ export class PickService {
   constructor(private readonly prisma: PrismaService) {}
 
   assignTrack(assignSongDto: AssignSongDto) {
-    return this.prisma.pick.upsert({
+    return this.prisma.client.pick.upsert({
       where: {
         roundId_userId: {
           roundId: Number(assignSongDto.roundId),
@@ -58,7 +58,7 @@ export class PickService {
   }
 
   getByRoundId(roundId: number) {
-    return this.prisma.pick.findMany({
+    return this.prisma.client.pick.findMany({
       where: {
         roundId: Number(roundId),
       },
@@ -69,11 +69,12 @@ export class PickService {
           },
         },
       },
+      cacheStrategy: { swr: 10, ttl: 10 },
     });
   }
 
   getFirstWithoutVotes(pin: string) {
-    return this.prisma.pick.findFirst({
+    return this.prisma.client.pick.findFirst({
       where: {
         round: {
           game: {
@@ -90,18 +91,19 @@ export class PickService {
   }
 
   getById(id: number) {
-    return this.prisma.pick.findUnique({
+    return this.prisma.client.pick.findUnique({
       where: {
         id,
       },
       include: {
         track: true,
       },
+      cacheStrategy: { swr: 30, ttl: 30 },
     });
   }
 
   remove(roundId: number, userId: string) {
-    return this.prisma.pick.delete({
+    return this.prisma.client.pick.delete({
       where: {
         roundId_userId: {
           roundId,

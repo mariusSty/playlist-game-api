@@ -6,7 +6,7 @@ export class GameService {
   constructor(private prisma: PrismaService) {}
 
   create(pin: string, userIds: string[]) {
-    return this.prisma.game.create({
+    return this.prisma.client.game.create({
       data: {
         room: {
           connect: {
@@ -30,7 +30,7 @@ export class GameService {
   }
 
   findOne(id: number) {
-    return this.prisma.game.findFirstOrThrow({
+    return this.prisma.client.game.findFirstOrThrow({
       where: {
         id,
       },
@@ -47,11 +47,12 @@ export class GameService {
           },
         },
       },
+      cacheStrategy: { swr: 30, ttl: 30 },
     });
   }
 
   detachRoom(id: number) {
-    return this.prisma.game.update({
+    return this.prisma.client.game.update({
       data: {
         roomId: null,
       },
