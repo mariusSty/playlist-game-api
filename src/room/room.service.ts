@@ -45,7 +45,7 @@ export class RoomService {
   }
 
   findOne(pin: string) {
-    return this.prisma.client.room.findUniqueOrThrow({
+    return this.prisma.client.room.findUnique({
       where: {
         pin,
       },

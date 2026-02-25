@@ -38,6 +38,7 @@ export class SharedGateway implements OnGatewayDisconnect {
     const { pin } = data;
     client.join(pin);
     const room = await this.roomService.findOne(pin);
+    if (!room) return;
     this.server.to(pin).emit('userList', {
       users: room.users,
       hostId: room.hostId,
@@ -52,6 +53,7 @@ export class SharedGateway implements OnGatewayDisconnect {
   ) {
     const { pin, userId } = data;
     const room = await this.roomService.findOne(pin);
+    if (!room) return;
     let hostId = room.hostId;
     if (room.users.length === 1) {
       client.leave(pin);
@@ -74,6 +76,7 @@ export class SharedGateway implements OnGatewayDisconnect {
   @SubscribeMessage('startGame')
   async handleStartGame(@MessageBody() data: { pin: string; userId: string }) {
     const room = await this.roomService.findOne(data.pin);
+    if (!room) return;
     await this.gameService.create(
       data.pin,
       room.users.map((user) => user.id),
@@ -106,6 +109,7 @@ export class SharedGateway implements OnGatewayDisconnect {
       this.pickService.getByRoundId(data.roundId),
       this.roomService.findOne(data.pin),
     ]);
+    if (!room) return;
     const allValidated = room.users.length === picks.length;
     if (allValidated) {
       const pick = await this.pickService.getFirstWithoutVotes(data.pin);
@@ -148,6 +152,7 @@ export class SharedGateway implements OnGatewayDisconnect {
       this.voteService.getByPickId(Number(data.pickId)),
       this.roomService.findOne(data.pin),
     ]);
+    if (!room) return;
     const allVoted = room.users.length === votes.length;
     if (allVoted) {
       const pick = await this.pickService.getFirstWithoutVotes(data.pin);
