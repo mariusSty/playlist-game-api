@@ -44,9 +44,6 @@ export class VoteService {
       where: {
         pickId,
       },
-      include: {
-        guessedUser: true,
-      },
       cacheStrategy: { swr: 10, ttl: 10 },
     });
   }

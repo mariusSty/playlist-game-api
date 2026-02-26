@@ -163,7 +163,7 @@ export class SharedGateway implements OnGatewayDisconnect {
     } else {
       this.server.to(data.pin).emit('voteValidated', {
         pin: data.pin,
-        users: votes.map((vote) => vote.guessedUser.id),
+        users: votes.map((vote) => vote.guessUserId),
       });
     }
   }
@@ -176,7 +176,7 @@ export class SharedGateway implements OnGatewayDisconnect {
     const votes = await this.voteService.getByPickId(Number(data.pickId));
     this.server.to(data.pin).emit('voteCanceled', {
       pin: data.pin,
-      users: votes.map((vote) => vote.guessedUser.id),
+      users: votes.map((vote) => vote.guessUserId),
     });
   }
 
