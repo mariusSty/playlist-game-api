@@ -3,12 +3,15 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Patch,
   Post,
 } from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
 import { CreateRoomDto } from './dto/create-room.dto';
+import { RoomGateway } from './room.gateway';
 import { RoomService } from './room.service';
 
 @Controller('room')
@@ -16,6 +19,7 @@ export class RoomController {
   constructor(
     private readonly roomService: RoomService,
     private readonly userService: UserService,
+    private readonly roomGateway: RoomGateway,
   ) {}
 
   @Post()
@@ -34,7 +38,8 @@ export class RoomController {
       pin = Math.floor(100000 + Math.random() * 900000).toString();
       exists = !!(await this.roomService.findIfExists(pin));
     }
-    return this.roomService.create(user.id, pin);
+    const room = await this.roomService.create(user.id, pin);
+    return room;
   }
 
   @Get(':pin')
@@ -49,11 +54,45 @@ export class RoomController {
   ) {
     const { id, name } = updateRoomDto;
     const user = await this.userService.upsertUser(id, name);
-    return this.roomService.connect(pin, user.id);
+    const room = await this.roomService.connect(pin, user.id);
+    const fullRoom = await this.roomService.findOne(pin);
+    if (fullRoom) {
+      this.roomGateway.emitRoomUpdated(pin, fullRoom.users, fullRoom.hostId);
+    }
+    return room;
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.roomService.remove(+id);
+  }
+
+  @Delete(':pin/users/:userId')
+  async leave(@Param('pin') pin: string, @Param('userId') userId: string) {
+    const room = await this.roomService.findOne(pin);
+    if (!room) {
+      throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
+    }
+
+    // Last user → delete the room entirely
+    if (room.users.length === 1) {
+      await this.roomService.remove(room.id);
+      return { deleted: true };
+    }
+
+    // If the leaving user is the host, transfer host to another user
+    let hostId = room.hostId;
+    if (room.hostId === userId) {
+      const newHostId = room.users.find((u) => u.id !== userId)?.id;
+      await this.roomService.updateHost(pin, newHostId);
+      hostId = newHostId;
+    }
+
+    await this.roomService.disconnect(pin, userId);
+
+    const remainingUsers = room.users.filter((u) => u.id !== userId);
+    this.roomGateway.emitRoomUpdated(pin, remainingUsers, hostId);
+
+    return { users: remainingUsers, hostId };
   }
 }

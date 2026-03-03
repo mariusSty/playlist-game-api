@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as dotenv from 'dotenv';
+import { Socket as ClientSocket, io } from 'socket.io-client';
 import request from 'supertest';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaModule } from '../src/prisma.module';
@@ -14,6 +15,7 @@ dotenv.config({ path: '.env.test' });
 describe('RoomController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaClient;
+  let wsPort: number;
 
   beforeAll(async () => {
     // Sync test database schema
@@ -51,6 +53,10 @@ describe('RoomController (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+
+    // Start the HTTP server once and capture the port for WebSocket tests
+    const address = app.getHttpServer().listen().address();
+    wsPort = typeof address === 'string' ? 0 : (address as any).port;
   });
 
   afterAll(async () => {
@@ -164,7 +170,15 @@ describe('RoomController (e2e)', () => {
   });
 
   describe('PATCH /room/:pin', () => {
-    it('should connect a new user to an existing room', async () => {
+    let wsClient: ClientSocket;
+
+    afterEach(() => {
+      if (wsClient?.connected) {
+        wsClient.disconnect();
+      }
+    });
+
+    it('should connect a new user to an existing room and emit room:updated', async () => {
       // Create a room
       const createRes = await request(app.getHttpServer())
         .post('/room')
@@ -173,13 +187,42 @@ describe('RoomController (e2e)', () => {
 
       const pin = createRes.body.pin;
 
-      // Connect a second user
+      // Connect a WebSocket client and subscribe to the room
+      wsClient = io(`http://localhost:${wsPort}`, {
+        transports: ['websocket'],
+        forceNew: true,
+      });
+
+      await new Promise<void>((resolve) => wsClient.on('connect', resolve));
+
+      // Subscribe — host is a member, so it should be accepted
+      wsClient.emit('room:subscribe', { pin, userId: 'host-1' });
+
+      // Wait for the subscribe to be processed
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Set up listener for the room:updated event
+      const userListPromise = new Promise<any>((resolve) => {
+        wsClient.on('room:updated', (data) => {
+          if (data.users?.length === 2) {
+            resolve(data);
+          }
+        });
+      });
+
+      // Connect a second user via PATCH
       await request(app.getHttpServer())
         .patch(`/room/${pin}`)
         .send({ id: 'guest-1', name: 'Guest' })
         .expect(200);
 
-      // Verify both users are in the room
+      // Verify WebSocket event was emitted
+      const wsData = await userListPromise;
+      expect(wsData.pin).toBe(pin);
+      expect(wsData.hostId).toBe('host-1');
+      expect(wsData.users).toHaveLength(2);
+
+      // Verify both users are in the room in DB
       const room = await prisma.room.findUnique({
         where: { pin },
         include: { users: true },
@@ -189,10 +232,148 @@ describe('RoomController (e2e)', () => {
       expect(userIds).toEqual(['guest-1', 'host-1']);
     });
 
+    it('should reject room:subscribe for a user not in the room', async () => {
+      // Create a room
+      const createRes = await request(app.getHttpServer())
+        .post('/room')
+        .send({ id: 'host-reject', name: 'Host' })
+        .expect(201);
+      const pin = createRes.body.pin;
+
+      // Connect a WS client as a stranger (not a member)
+      wsClient = io(`http://localhost:${wsPort}`, {
+        transports: ['websocket'],
+        forceNew: true,
+      });
+      await new Promise<void>((resolve) => wsClient.on('connect', resolve));
+
+      // Try to subscribe with a userId that is NOT in the room
+      wsClient.emit('room:subscribe', { pin, userId: 'stranger' });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // The stranger should NOT receive room:updated when a guest joins
+      let received = false;
+      wsClient.on('room:updated', () => {
+        received = true;
+      });
+
+      await request(app.getHttpServer())
+        .patch(`/room/${pin}`)
+        .send({ id: 'guest-reject', name: 'Guest' })
+        .expect(200);
+
+      // Give some time for a potential event
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(received).toBe(false);
+    });
+
     it('should return 404 for a non-existent room pin', async () => {
       await request(app.getHttpServer())
         .patch('/room/999999')
         .send({ id: 'guest-2', name: 'Nobody' })
+        .expect(404);
+    });
+  });
+
+  describe('DELETE /room/:pin/users/:userId', () => {
+    let wsClient: ClientSocket;
+
+    afterEach(() => {
+      if (wsClient?.connected) {
+        wsClient.disconnect();
+      }
+    });
+
+    it('should disconnect a user and emit room:updated', async () => {
+      // Create a room with a host
+      const createRes = await request(app.getHttpServer())
+        .post('/room')
+        .send({ id: 'host-leave', name: 'Host' })
+        .expect(201);
+      const pin = createRes.body.pin;
+
+      // Add a second user
+      await request(app.getHttpServer())
+        .patch(`/room/${pin}`)
+        .send({ id: 'guest-leave', name: 'Guest' })
+        .expect(200);
+
+      // Subscribe to the room via WebSocket (host is a member)
+      wsClient = io(`http://localhost:${wsPort}`, {
+        transports: ['websocket'],
+        forceNew: true,
+      });
+      await new Promise<void>((resolve) => wsClient.on('connect', resolve));
+      wsClient.emit('room:subscribe', { pin, userId: 'host-leave' });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Listen for userList after the leave
+      const userListPromise = new Promise<any>((resolve) => {
+        wsClient.on('room:updated', (data) => {
+          if (data.users?.length === 1) resolve(data);
+        });
+      });
+
+      // Guest leaves
+      const response = await request(app.getHttpServer())
+        .delete(`/room/${pin}/users/guest-leave`)
+        .expect(200);
+
+      expect(response.body.hostId).toBe('host-leave');
+      expect(response.body.users).toHaveLength(1);
+
+      // Verify WebSocket event
+      const wsData = await userListPromise;
+      expect(wsData.pin).toBe(pin);
+      expect(wsData.users).toHaveLength(1);
+      expect(wsData.hostId).toBe('host-leave');
+    });
+
+    it('should transfer host when the host leaves', async () => {
+      // Create a room
+      const createRes = await request(app.getHttpServer())
+        .post('/room')
+        .send({ id: 'host-transfer', name: 'Host' })
+        .expect(201);
+      const pin = createRes.body.pin;
+
+      // Add a second user
+      await request(app.getHttpServer())
+        .patch(`/room/${pin}`)
+        .send({ id: 'guest-transfer', name: 'Guest' })
+        .expect(200);
+
+      // Host leaves
+      const response = await request(app.getHttpServer())
+        .delete(`/room/${pin}/users/host-transfer`)
+        .expect(200);
+
+      expect(response.body.hostId).toBe('guest-transfer');
+      expect(response.body.users).toHaveLength(1);
+      expect(response.body.users[0].id).toBe('guest-transfer');
+    });
+
+    it('should delete the room when the last user leaves', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/room')
+        .send({ id: 'solo-user', name: 'Solo' })
+        .expect(201);
+      const pin = createRes.body.pin;
+
+      const response = await request(app.getHttpServer())
+        .delete(`/room/${pin}/users/solo-user`)
+        .expect(200);
+
+      expect(response.body.deleted).toBe(true);
+
+      // Verify room no longer exists
+      const room = await prisma.room.findUnique({ where: { pin } });
+      expect(room).toBeNull();
+    });
+
+    it('should return 404 for a non-existent room', async () => {
+      await request(app.getHttpServer())
+        .delete('/room/000000/users/nobody')
         .expect(404);
     });
   });

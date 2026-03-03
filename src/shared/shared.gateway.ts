@@ -1,5 +1,4 @@
 import {
-  ConnectedSocket,
   MessageBody,
   OnGatewayDisconnect,
   SubscribeMessage,
@@ -28,49 +27,6 @@ export class SharedGateway implements OnGatewayDisconnect {
 
   async handleDisconnect(client: Socket) {
     // Socket.IO rooms are cleaned up automatically on disconnect
-  }
-
-  @SubscribeMessage('joinRoom')
-  async handleJoinRoom(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { pin: string },
-  ) {
-    const { pin } = data;
-    client.join(pin);
-    const room = await this.roomService.findOne(pin);
-    if (!room) return;
-    this.server.to(pin).emit('userList', {
-      users: room.users,
-      hostId: room.hostId,
-      pin,
-    });
-  }
-
-  @SubscribeMessage('leaveRoom')
-  async handleLeaveRoom(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { pin: string; userId: string },
-  ) {
-    const { pin, userId } = data;
-    const room = await this.roomService.findOne(pin);
-    if (!room) return;
-    let hostId = room.hostId;
-    if (room.users.length === 1) {
-      client.leave(pin);
-      return this.roomService.remove(room.id);
-    }
-    if (room.hostId === userId) {
-      const newHostId = room.users.find((user) => user.id !== userId)?.id;
-      await this.roomService.updateHost(pin, newHostId);
-      hostId = newHostId;
-    }
-    await this.roomService.disconnect(pin, userId);
-    client.leave(pin);
-    this.server.to(pin).emit('userList', {
-      users: room.users.filter((user) => user.id !== userId),
-      hostId,
-      pin,
-    });
   }
 
   @SubscribeMessage('startGame')
