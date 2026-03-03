@@ -34,7 +34,6 @@ export class RoundService {
           },
         },
       },
-      cacheStrategy: { swr: 15, ttl: 15 },
     });
   }
 

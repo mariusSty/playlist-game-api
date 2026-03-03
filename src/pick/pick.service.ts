@@ -69,7 +69,6 @@ export class PickService {
           },
         },
       },
-      cacheStrategy: { swr: 10, ttl: 10 },
     });
   }
 
@@ -98,7 +97,6 @@ export class PickService {
       include: {
         track: true,
       },
-      cacheStrategy: { swr: 30, ttl: 30 },
     });
   }
 

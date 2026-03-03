@@ -28,19 +28,8 @@ describe('RoomController (e2e)', () => {
     prisma = new PrismaClient({ adapter });
     await prisma.$connect();
 
-    // Strip `cacheStrategy` (Accelerate-only) so queries work against a direct DB
-    const testClient = prisma.$extends({
-      query: {
-        $allModels: {
-          async $allOperations({ args, query }) {
-            const { cacheStrategy, ...rest } = args as any;
-            return query(rest);
-          },
-        },
-      },
-    });
-
     // Build the NestJS app, overriding PrismaService with the test client
+    const testClient = prisma;
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [PrismaModule, RoomModule],
     })

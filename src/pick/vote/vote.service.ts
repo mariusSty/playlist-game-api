@@ -44,7 +44,6 @@ export class VoteService {
       where: {
         pickId,
       },
-      cacheStrategy: { swr: 10, ttl: 10 },
     });
   }
 }

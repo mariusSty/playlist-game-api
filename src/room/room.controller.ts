@@ -55,10 +55,7 @@ export class RoomController {
     const { id, name } = updateRoomDto;
     const user = await this.userService.upsertUser(id, name);
     const room = await this.roomService.connect(pin, user.id);
-    const fullRoom = await this.roomService.findOne(pin);
-    if (fullRoom) {
-      this.roomGateway.emitRoomUpdated(pin, fullRoom.users, fullRoom.hostId);
-    }
+    this.roomGateway.emitRoomUpdated(pin, room.users, room.hostId);
     return room;
   }
 

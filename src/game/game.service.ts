@@ -47,7 +47,6 @@ export class GameService {
           },
         },
       },
-      cacheStrategy: { swr: 30, ttl: 30 },
     });
   }
 

@@ -40,7 +40,6 @@ export class RoomService {
       where: {
         pin,
       },
-      cacheStrategy: { swr: 10, ttl: 10 },
     });
   }
 
@@ -53,7 +52,6 @@ export class RoomService {
         users: true,
         host: true,
       },
-      cacheStrategy: { swr: 15, ttl: 15 },
     });
   }
 
@@ -69,6 +67,10 @@ export class RoomService {
               id,
             },
           },
+        },
+        include: {
+          users: true,
+          host: true,
         },
       });
     } catch (error) {
