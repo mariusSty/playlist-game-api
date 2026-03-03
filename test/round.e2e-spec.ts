@@ -200,4 +200,91 @@ describe('RoundController (e2e)', () => {
         .expect(404);
     });
   });
+
+  describe('POST /round/next', () => {
+    it('should return the next round and emit round:completed with nextRoundId', async () => {
+      const { pin, firstRoundId } = await createRoomAndGame(
+        'host-next-1',
+        'Host',
+        [{ id: 'guest-next-1', name: 'Guest' }],
+      );
+
+      // Set theme on first round so getNext returns the second one
+      const firstRound = await prisma.round.findUnique({
+        where: { id: firstRoundId },
+      });
+      await prisma.round.update({
+        where: { id: firstRoundId },
+        data: { theme: 'Done' },
+      });
+
+      // Connect a WebSocket client and subscribe to the room
+      const wsClient: ClientSocket = io(`http://localhost:${wsPort}`, {
+        transports: ['websocket'],
+        forceNew: true,
+      });
+      await new Promise<void>((resolve) => wsClient.on('connect', resolve));
+      wsClient.emit('room:subscribe', {
+        pin,
+        userId: firstRound.themeMasterId,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const roundCompletedPromise = new Promise<any>((resolve) => {
+        wsClient.on('round:completed', (data) => resolve(data));
+      });
+
+      const response = await request(app.getHttpServer())
+        .post(`/round/next?pin=${pin}`)
+        .expect(201);
+
+      expect(response.body.nextRoundId).toEqual(expect.any(Number));
+      expect(response.body.nextRoundId).not.toBe(firstRoundId);
+
+      // Verify WebSocket event was emitted with the nextRoundId
+      const wsData = await roundCompletedPromise;
+      expect(wsData.nextRoundId).toBe(response.body.nextRoundId);
+
+      wsClient.disconnect();
+    });
+
+    it('should return null nextRoundId and emit round:completed without nextRoundId when no rounds left', async () => {
+      const { pin } = await createRoomAndGame('host-next-2', 'Host', [
+        { id: 'guest-next-2', name: 'Guest' },
+      ]);
+
+      // Mark all rounds as having a theme (= completed)
+      await prisma.round.updateMany({
+        where: {
+          game: { room: { pin } },
+        },
+        data: { theme: 'Done' },
+      });
+
+      // Connect a WebSocket client and subscribe to the room
+      const wsClient: ClientSocket = io(`http://localhost:${wsPort}`, {
+        transports: ['websocket'],
+        forceNew: true,
+      });
+      await new Promise<void>((resolve) => wsClient.on('connect', resolve));
+      wsClient.emit('room:subscribe', { pin, userId: 'host-next-2' });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const roundCompletedPromise = new Promise<any>((resolve) => {
+        wsClient.on('round:completed', (data) => resolve(data));
+      });
+
+      const response = await request(app.getHttpServer())
+        .post(`/round/next?pin=${pin}`)
+        .expect(201);
+
+      expect(response.body.nextRoundId).toBeNull();
+
+      // Verify WebSocket event was emitted without nextRoundId
+      const wsData = await roundCompletedPromise;
+      expect(wsData.nextRoundId).toBeUndefined();
+
+      wsClient.disconnect();
+    });
+  });
 });

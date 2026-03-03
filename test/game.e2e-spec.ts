@@ -184,4 +184,37 @@ describe('GameController (e2e)', () => {
       await request(app.getHttpServer()).get('/game/99999').expect(500);
     });
   });
+
+  describe('PATCH /game/:id/finish', () => {
+    it('should detach the room from the game', async () => {
+      const pin = await createRoomWithUsers('host-finish-1', 'Host', [
+        { id: 'guest-finish-1', name: 'Guest' },
+      ]);
+
+      const createRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+
+      const gameId = createRes.body.gameId;
+
+      // Verify the game is attached to the room
+      const gameBefore = await prisma.game.findUnique({
+        where: { id: gameId },
+      });
+      expect(gameBefore.roomId).not.toBeNull();
+
+      const response = await request(app.getHttpServer())
+        .patch(`/game/${gameId}/finish`)
+        .expect(200);
+
+      expect(response.body).toEqual({ finished: true });
+
+      // Verify the room was detached
+      const gameAfter = await prisma.game.findUnique({
+        where: { id: gameId },
+      });
+      expect(gameAfter.roomId).toBeNull();
+    });
+  });
 });

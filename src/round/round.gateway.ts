@@ -8,4 +8,8 @@ export class RoundGateway {
   emitThemeUpdated(pin: string) {
     this.server.to(pin).emit('round:themeUpdated');
   }
+
+  emitRoundCompleted(pin: string, nextRoundId?: number) {
+    this.server.to(pin).emit('round:completed', { nextRoundId });
+  }
 }

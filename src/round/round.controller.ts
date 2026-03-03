@@ -7,6 +7,8 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  Post,
+  Query,
 } from '@nestjs/common';
 import { PickThemeDto } from './dto/pick-theme.dto';
 import { RoundGateway } from './round.gateway';
@@ -47,5 +49,12 @@ export class RoundController {
     this.roundGateway.emitThemeUpdated(pickThemeDto.pin);
 
     return updated;
+  }
+
+  @Post('next')
+  async nextRound(@Query('pin') pin: string) {
+    const round = await this.roundService.getNext(pin);
+    this.roundGateway.emitRoundCompleted(pin, round?.id);
+    return { nextRoundId: round?.id ?? null };
   }
 }

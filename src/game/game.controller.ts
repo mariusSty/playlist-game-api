@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { RoomService } from 'src/room/room.service';
@@ -70,5 +71,11 @@ export class GameController {
     }
 
     return result;
+  }
+
+  @Patch(':id/finish')
+  async finish(@Param('id', ParseIntPipe) id: number) {
+    await this.gameService.detachRoom(id);
+    return { finished: true };
   }
 }
