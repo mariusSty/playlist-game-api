@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker';
 import {
   Body,
   Controller,
@@ -22,10 +21,7 @@ export class RoomController {
   @Post()
   async create(@Body() createRoomDto: CreateRoomDto) {
     const { id, name } = createRoomDto;
-    const user = await this.userService.upsertUser(
-      id,
-      name ? name : faker.animal.cat(),
-    );
+    const user = await this.userService.upsertUser(id, name);
 
     const existingRoom = await this.roomService.findByHostId(user.id);
     if (existingRoom) {
@@ -52,10 +48,7 @@ export class RoomController {
     @Body() updateRoomDto: CreateRoomDto,
   ) {
     const { id, name } = updateRoomDto;
-    const user = await this.userService.upsertUser(
-      id,
-      name ? name : faker.animal.cat(),
-    );
+    const user = await this.userService.upsertUser(id, name);
     return this.roomService.connect(pin, user.id);
   }
 

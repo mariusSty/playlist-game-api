@@ -1,4 +1,4 @@
 export class CreateRoomDto {
   id: string;
-  name?: string;
+  name: string;
 }
