@@ -50,6 +50,30 @@ export class GameService {
     });
   }
 
+  calculateResults(game: Awaited<ReturnType<GameService['findOne']>>) {
+    const scoreMap = new Map<
+      string,
+      { user: (typeof game.users)[number]; score: number }
+    >();
+
+    for (const user of game.users) {
+      scoreMap.set(user.id, { user, score: 0 });
+    }
+
+    for (const round of game.rounds) {
+      for (const pick of round.picks) {
+        for (const vote of pick.votes) {
+          if (vote.guessedUserId === pick.userId) {
+            const entry = scoreMap.get(vote.guessUserId);
+            if (entry) entry.score++;
+          }
+        }
+      }
+    }
+
+    return [...scoreMap.values()];
+  }
+
   detachRoom(id: number) {
     return this.prisma.client.game.update({
       data: {

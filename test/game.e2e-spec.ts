@@ -52,6 +52,7 @@ describe('GameController (e2e)', () => {
   afterEach(async () => {
     await prisma.vote.deleteMany();
     await prisma.pick.deleteMany();
+    await prisma.track.deleteMany();
     await prisma.round.deleteMany();
     await prisma.game.deleteMany();
     await prisma.room.deleteMany();
@@ -182,6 +183,118 @@ describe('GameController (e2e)', () => {
 
     it('should return 500 for a non-existent game id', async () => {
       await request(app.getHttpServer()).get('/game/99999').expect(500);
+    });
+  });
+
+  describe('GET /game/:id/result', () => {
+    it('should return scores with correct guesses counted', async () => {
+      const pin = await createRoomWithUsers('host-res-1', 'Host', [
+        { id: 'guest-res-1', name: 'Alice' },
+        { id: 'guest-res-2', name: 'Bob' },
+      ]);
+
+      const gameRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+
+      const gameId = gameRes.body.gameId;
+      const roundId = gameRes.body.roundId;
+
+      // Create tracks + picks for the first round
+      await prisma.track.createMany({
+        data: [
+          {
+            id: 'track-res-1',
+            title: 'Song 1',
+            artist: 'Artist 1',
+            previewUrl: 'https://example.com/1.mp3',
+          },
+          {
+            id: 'track-res-2',
+            title: 'Song 2',
+            artist: 'Artist 2',
+            previewUrl: 'https://example.com/2.mp3',
+          },
+          {
+            id: 'track-res-3',
+            title: 'Song 3',
+            artist: 'Artist 3',
+            previewUrl: 'https://example.com/3.mp3',
+          },
+        ],
+      });
+
+      const pick1 = await prisma.pick.create({
+        data: { roundId, userId: 'host-res-1', trackId: 'track-res-1' },
+      });
+      const pick2 = await prisma.pick.create({
+        data: { roundId, userId: 'guest-res-1', trackId: 'track-res-2' },
+      });
+      const pick3 = await prisma.pick.create({
+        data: { roundId, userId: 'guest-res-2', trackId: 'track-res-3' },
+      });
+
+      // Votes: guest-res-1 correctly guesses host-res-1's pick and guest-res-2's pick
+      await prisma.vote.createMany({
+        data: [
+          {
+            pickId: pick1.id,
+            guessUserId: 'guest-res-1',
+            guessedUserId: 'host-res-1',
+          }, // correct
+          {
+            pickId: pick3.id,
+            guessUserId: 'guest-res-1',
+            guessedUserId: 'guest-res-2',
+          }, // correct
+          {
+            pickId: pick2.id,
+            guessUserId: 'host-res-1',
+            guessedUserId: 'guest-res-2',
+          }, // wrong
+          {
+            pickId: pick1.id,
+            guessUserId: 'guest-res-2',
+            guessedUserId: 'guest-res-1',
+          }, // wrong
+        ],
+      });
+
+      const response = await request(app.getHttpServer())
+        .get(`/game/${gameId}/result`)
+        .expect(200);
+
+      expect(response.body).toHaveLength(3);
+
+      const scoreOf = (userId: string) =>
+        response.body.find((r: any) => r.user.id === userId)?.score;
+
+      // guest-res-1 guessed correctly twice
+      expect(scoreOf('guest-res-1')).toBe(2);
+      // host-res-1 and guest-res-2 guessed wrong
+      expect(scoreOf('host-res-1')).toBe(0);
+      expect(scoreOf('guest-res-2')).toBe(0);
+    });
+
+    it('should return all scores at zero when no votes exist', async () => {
+      const pin = await createRoomWithUsers('host-res-2', 'Host', [
+        { id: 'guest-res-3', name: 'Alice' },
+      ]);
+
+      const gameRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+
+      const response = await request(app.getHttpServer())
+        .get(`/game/${gameRes.body.gameId}/result`)
+        .expect(200);
+
+      expect(response.body).toHaveLength(2);
+      for (const entry of response.body) {
+        expect(entry.score).toBe(0);
+      }
     });
   });
 
