@@ -140,6 +140,8 @@ describe('PickController (e2e)', () => {
 
       const wsData = await pickUpdatedPromise;
       expect(wsData.users).toEqual(['host-1']);
+      // Not everyone picked yet → no firstPickId
+      expect(wsData.firstPickId).toBeUndefined();
 
       // Verify pick was persisted
       const pick = await prisma.pick.findUnique({
@@ -152,7 +154,7 @@ describe('PickController (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit pick:updated with all user ids when everyone has picked', async () => {
+    it('should emit pick:updated with firstPickId when everyone has picked', async () => {
       const { pin, firstRoundId } = await createRoomAndGame('host-2', 'Host', [
         { id: 'guest-2', name: 'Guest' },
       ]);
@@ -192,6 +194,8 @@ describe('PickController (e2e)', () => {
       expect(wsData.users).toHaveLength(2);
       expect(wsData.users).toContain('host-2');
       expect(wsData.users).toContain('guest-2');
+      // Everyone picked → firstPickId should be set
+      expect(wsData.firstPickId).toEqual(expect.any(Number));
 
       wsClient.disconnect();
     });

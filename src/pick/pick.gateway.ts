@@ -5,7 +5,7 @@ import { Server } from 'socket.io';
 export class PickGateway {
   @WebSocketServer() server: Server;
 
-  emitPickUpdated(pin: string, users: string[]) {
-    this.server.to(pin).emit('pick:updated', { users });
+  emitPickUpdated(pin: string, users: string[], firstPickId?: number) {
+    this.server.to(pin).emit('pick:updated', { users, firstPickId });
   }
 }
