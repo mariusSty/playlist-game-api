@@ -29,16 +29,6 @@ export class SharedGateway implements OnGatewayDisconnect {
     // Socket.IO rooms are cleaned up automatically on disconnect
   }
 
-  @SubscribeMessage('pickTheme')
-  async handlePickTheme(
-    @MessageBody() data: { roundId: number; theme: string; pin: string },
-  ) {
-    await this.roundService.update(Number(data.roundId), data.theme);
-    this.server
-      .to(data.pin)
-      .emit('themePicked', { roundId: data.roundId, pin: data.pin });
-  }
-
   @SubscribeMessage('validSong')
   async handleValidSong(
     @MessageBody()
