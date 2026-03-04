@@ -102,7 +102,7 @@ describe('GameController (e2e)', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       const gameStartedPromise = new Promise<any>((resolve) => {
-        wsClient.on('gameStarted', (data) => resolve(data));
+        wsClient.on('game:started', (data) => resolve(data));
       });
 
       const response = await request(app.getHttpServer())

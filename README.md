@@ -214,7 +214,7 @@ Crée une Game avec autant de Rounds que de joueurs dans le salon.
 { "roundId": 1, "gameId": 1 }
 ```
 
-Émet `gameStarted` via WebSocket.
+Émet `game:started` via WebSocket.
 
 ---
 
@@ -440,7 +440,7 @@ Connexion sur `ws://localhost:3000` (même port que le serveur HTTP). Les events
 | Event                | Payload                    | Description                                                                                       |
 | -------------------- | -------------------------- | ------------------------------------------------------------------------------------------------- |
 | `room:updated`       | `{ users, hostId, pin }`   | Liste des joueurs mise à jour (join / leave / host transfer)                                      |
-| `gameStarted`        | `{ roundId, gameId, pin }` | La partie a démarré, contient l'ID du premier round                                               |
+| `game:started`       | `{ roundId, gameId, pin }` | La partie a démarré, contient l'ID du premier round                                               |
 | `round:themeUpdated` | —                          | Le thème du round a été choisi                                                                    |
 | `round:completed`    | `{ nextRoundId }`          | Le round est terminé. `nextRoundId` est `null` si c'était le dernier → fin de partie              |
 | `pick:updated`       | `{ users, firstPickId? }`  | Un joueur a validé/annulé sa chanson. `firstPickId` présent quand tous ont pick                   |
@@ -463,7 +463,7 @@ src/
 │   └── dto/
 ├── game/
 │   ├── game.controller.ts   # Créer / récupérer partie + résultats + finish
-│   ├── game.gateway.ts      # WS : gameStarted
+│   ├── game.gateway.ts      # WS : game:started
 │   ├── game.service.ts      # Création game + calcul scores
 │   └── dto/
 ├── round/
@@ -497,7 +497,7 @@ prisma/
 
 1. **Création du salon** — Un joueur crée un salon (`POST /room`), un PIN à 6 chiffres est généré. Les autres rejoignent via `PATCH /room/:pin`.
 2. **Connexion WebSocket** — Chaque joueur émet `room:subscribe` avec son `pin` et `userId` pour recevoir les events en temps réel.
-3. **Lancement** — L'hôte appelle `POST /game`. Une Game est créée avec autant de Rounds que de joueurs (chacun sera _themeMaster_ une fois). `gameStarted` est émis.
+3. **Lancement** — L'hôte appelle `POST /game`. Une Game est créée avec autant de Rounds que de joueurs (chacun sera _themeMaster_ une fois). `game:started` est émis.
 4. **Phase thème** — Le themeMaster appelle `PATCH /round/:roundId` avec le thème de son choix. `round:themeUpdated` est émis.
 5. **Phase sélection** — Chaque joueur recherche une chanson (`GET /pick/search/:text`) puis valide (`POST /pick`). À chaque validation, `pick:updated` est émis. Quand tout le monde a validé, `firstPickId` est inclus dans le payload.
 6. **Phase vote** — Les extraits sont joués un par un. Pour chaque pick, les joueurs votent (`POST /vote`). `vote:updated` est émis à chaque vote. Quand tous ont voté, `nextPickId` indique le pick suivant ou `null` si le round est terminé.

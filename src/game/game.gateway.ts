@@ -9,6 +9,6 @@ export class GameGateway {
     pin: string,
     data: { roundId: number; gameId: number; pin: string },
   ) {
-    this.server.to(pin).emit('gameStarted', data);
+    this.server.to(pin).emit('game:started', data);
   }
 }
