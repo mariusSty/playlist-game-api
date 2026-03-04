@@ -17,6 +17,8 @@ Backend temps réel pour **Playlist Game**, un jeu mobile multijoueur où chaque
 | **Package manager**  | pnpm 10                                                                  |
 | **Conteneurisation** | Docker (multi-stage build)                                               |
 | **Hébergement**      | [Fly.io](https://fly.io/) (région `jnb`)                                 |
+| **Monitoring**       | [Sentry](https://sentry.io/) (errors + perf + profiling)                 |
+| **Health checks**    | [@nestjs/terminus](https://docs.nestjs.com/recipes/terminus)             |
 | **Tests**            | Jest 30 · Supertest · Socket.IO Client                                   |
 
 ---
@@ -46,6 +48,7 @@ cp .env.example .env  # puis renseigner les variables ci-dessous
 | --------------------- | ----------------------------------------------------------------- |
 | `DATABASE_URL`        | URL Prisma Accelerate (`prisma+postgres://…`)                     |
 | `DIRECT_DATABASE_URL` | URL de connexion directe PostgreSQL (utilisée par les migrations) |
+| `SENTRY_DSN`          | DSN Sentry (optionnel — monitoring désactivé si absent)           |
 
 ### Base de données
 
@@ -121,6 +124,25 @@ Room ──── Game ──── Round ──── Pick ──── Vote
 ---
 
 ## API REST
+
+### Health
+
+#### `GET /health` — Health check
+
+Vérifie que le serveur et la base de données sont opérationnels.
+
+**Réponse `200`**
+
+```json
+{
+  "status": "ok",
+  "info": { "database": { "status": "up" } },
+  "error": {},
+  "details": { "database": { "status": "up" } }
+}
+```
+
+---
 
 ### Room
 
@@ -452,10 +474,15 @@ Connexion sur `ws://localhost:3000` (même port que le serveur HTTP). Les events
 
 ```
 src/
+├── instrument.ts            # Init Sentry (importé en premier dans main.ts)
 ├── main.ts                  # Bootstrap NestJS (port 3000, CORS)
-├── app.module.ts            # Module racine
+├── app.module.ts            # Module racine (SentryModule, HealthModule, …)
 ├── prisma.service.ts        # Client Prisma + extension Accelerate
 ├── prisma.module.ts         # Module Prisma (global)
+├── health/
+│   ├── health.module.ts     # Module health check
+│   ├── health.controller.ts # GET /health
+│   └── prisma.health.ts     # Indicateur santé Prisma
 ├── room/
 │   ├── room.controller.ts   # CRUD salon + leave
 │   ├── room.gateway.ts      # WS : room:subscribe / room:unsubscribe / room:updated
