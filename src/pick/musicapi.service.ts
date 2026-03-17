@@ -13,6 +13,8 @@ export class MusicApiService {
       id: item.id.toString(),
       title: item.title,
       artist: item.artist.name,
+      album: item.album.title,
+      cover: item.album.cover_medium,
       previewUrl: item.preview,
     }));
   }

@@ -94,9 +94,11 @@ model Vote {
 }
 
 model Track {
-  id         String @unique @default(uuid())
+  id         String  @unique @default(uuid())
   title      String
   artist     String
+  album      String
+  cover      String
   previewUrl String
   Pick       Pick[]
 }

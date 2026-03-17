@@ -60,14 +60,21 @@ CREATE TABLE "Track" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "artist" TEXT NOT NULL,
+    "album" TEXT NOT NULL,
+    "cover" TEXT NOT NULL,
     "previewUrl" TEXT NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "_GameToUser" (
     "A" INTEGER NOT NULL,
-    "B" TEXT NOT NULL
+    "B" TEXT NOT NULL,
+
+    CONSTRAINT "_GameToUser_AB_pkey" PRIMARY KEY ("A","B")
 );
+
+-- CreateIndex
+CREATE INDEX "User_roomId_idx" ON "User"("roomId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Room_pin_key" ON "Room"("pin");
@@ -76,16 +83,40 @@ CREATE UNIQUE INDEX "Room_pin_key" ON "Room"("pin");
 CREATE UNIQUE INDEX "Room_hostId_key" ON "Room"("hostId");
 
 -- CreateIndex
+CREATE INDEX "Game_roomId_idx" ON "Game"("roomId");
+
+-- CreateIndex
+CREATE INDEX "Round_gameId_idx" ON "Round"("gameId");
+
+-- CreateIndex
+CREATE INDEX "Round_themeMasterId_idx" ON "Round"("themeMasterId");
+
+-- CreateIndex
+CREATE INDEX "Pick_roundId_idx" ON "Pick"("roundId");
+
+-- CreateIndex
+CREATE INDEX "Pick_trackId_idx" ON "Pick"("trackId");
+
+-- CreateIndex
+CREATE INDEX "Pick_userId_idx" ON "Pick"("userId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Pick_roundId_userId_key" ON "Pick"("roundId", "userId");
+
+-- CreateIndex
+CREATE INDEX "Vote_pickId_idx" ON "Vote"("pickId");
+
+-- CreateIndex
+CREATE INDEX "Vote_guessedUserId_idx" ON "Vote"("guessedUserId");
+
+-- CreateIndex
+CREATE INDEX "Vote_guessUserId_idx" ON "Vote"("guessUserId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Vote_pickId_guessUserId_key" ON "Vote"("pickId", "guessUserId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Track_id_key" ON "Track"("id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "_GameToUser_AB_unique" ON "_GameToUser"("A", "B");
 
 -- CreateIndex
 CREATE INDEX "_GameToUser_B_index" ON "_GameToUser"("B");
