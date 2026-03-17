@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { UserService } from 'src/user/user.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { RoomGateway } from './room.gateway';
@@ -39,6 +40,7 @@ export class RoomController {
       exists = !!(await this.roomService.findIfExists(pin));
     }
     const room = await this.roomService.create(user.id, pin);
+    Sentry.logger.info('Room created', { pin, hostId: user.id, hostName: name });
     return room;
   }
 
@@ -55,6 +57,7 @@ export class RoomController {
     const { id, name } = updateRoomDto;
     const user = await this.userService.upsertUser(id, name);
     const room = await this.roomService.connect(pin, user.id);
+    Sentry.logger.info('Player joined room', { pin, userId: user.id, name, totalPlayers: room.users.length });
     this.roomGateway.emitRoomUpdated(pin, room.users, room.hostId);
     return room;
   }
@@ -73,6 +76,7 @@ export class RoomController {
 
     // Last user → delete the room entirely
     if (room.users.length === 1) {
+      Sentry.logger.info('Room deleted (last player left)', { pin, lastUserId: userId });
       await this.roomService.remove(room.id);
       return { deleted: true };
     }
@@ -88,6 +92,7 @@ export class RoomController {
     await this.roomService.disconnect(pin, userId);
 
     const remainingUsers = room.users.filter((u) => u.id !== userId);
+    Sentry.logger.info('Player left room', { pin, userId, remainingPlayers: remainingUsers.length, hostId });
     this.roomGateway.emitRoomUpdated(pin, remainingUsers, hostId);
 
     return { users: remainingUsers, hostId };

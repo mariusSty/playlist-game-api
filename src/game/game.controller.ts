@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { RoomService } from 'src/room/room.service';
 import { CreateGameDto } from './dto/create-game.dto';
 import { GameGateway } from './game.gateway';
@@ -36,6 +37,14 @@ export class GameController {
 
     const firstRound = game.rounds[0];
 
+    Sentry.logger.info('Game started', {
+      pin: createGameDto.pin,
+      gameId: game.id,
+      playerCount: room.users.length,
+      roundCount: game.rounds.length,
+      firstRoundId: firstRound.id,
+    });
+
     this.gameGateway.emitGameStarted(createGameDto.pin, {
       roundId: firstRound.id,
       gameId: game.id,
@@ -53,11 +62,19 @@ export class GameController {
   @Get(':id/result')
   async findResult(@Param('id', ParseIntPipe) id: number) {
     const game = await this.gameService.findOne(id);
-    return this.gameService.calculateResults(game);
+    const results = this.gameService.calculateResults(game);
+    const winner = results.reduce((a, b) => (a.score > b.score ? a : b));
+    Sentry.logger.info('Game results computed', {
+      gameId: id,
+      winnerName: winner.user.name,
+      topScore: winner.score,
+    });
+    return results;
   }
 
   @Patch(':id/finish')
   async finish(@Param('id', ParseIntPipe) id: number) {
+    Sentry.logger.info('Game finished', { gameId: id });
     await this.gameService.detachRoom(id);
     return { finished: true };
   }

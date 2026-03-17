@@ -7,6 +7,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { CreateVoteDto } from 'src/pick/dto/create-vote.dto';
 import { PickService } from 'src/pick/pick.service';
 import { RoomService } from 'src/room/room.service';
@@ -38,6 +39,12 @@ export class VoteController {
     if (allVoted) {
       const nextPick = await this.pickService.getFirstWithoutVotes(pin);
       nextPickId = nextPick ? nextPick.id : null;
+      Sentry.logger.info('All votes cast for pick', {
+        pin,
+        pickId: createVoteDto.pickId,
+        nextPickId,
+        isRoundOver: nextPickId === null,
+      });
     }
     this.voteGateway.emitVoteUpdated(pin, users, nextPickId);
     return { success: true };

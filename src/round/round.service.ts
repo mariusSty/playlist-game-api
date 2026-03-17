@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -52,7 +53,8 @@ export class RoundService {
     });
   }
 
-  update(id: number, theme: string) {
+  async update(id: number, theme: string) {
+    Sentry.logger.info('Theme selected for round', { roundId: id, theme });
     return this.prisma.client.round.update({
       where: {
         id,

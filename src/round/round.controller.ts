@@ -10,6 +10,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { PickThemeDto } from './dto/pick-theme.dto';
 import { RoundGateway } from './round.gateway';
 import { RoundService } from './round.service';
@@ -46,6 +47,12 @@ export class RoundController {
 
     const updated = await this.roundService.update(roundId, pickThemeDto.theme);
 
+    Sentry.logger.info('Theme selected', {
+      roundId,
+      theme: pickThemeDto.theme,
+      themeMasterId: pickThemeDto.userId,
+      pin: pickThemeDto.pin,
+    });
     this.roundGateway.emitThemeUpdated(pickThemeDto.pin);
 
     return updated;
@@ -54,6 +61,11 @@ export class RoundController {
   @Post('next')
   async nextRound(@Query('pin') pin: string) {
     const round = await this.roundService.getNext(pin);
+    Sentry.logger.info('Next round resolved', {
+      pin,
+      nextRoundId: round?.id ?? null,
+      isGameOver: !round,
+    });
     this.roundGateway.emitRoundCompleted(pin, round?.id);
     return { nextRoundId: round?.id ?? null };
   }

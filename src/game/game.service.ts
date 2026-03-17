@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
 export class GameService {
   constructor(private prisma: PrismaService) {}
 
-  create(pin: string, userIds: string[]) {
+  async create(pin: string, userIds: string[]) {
+    Sentry.logger.info('Game created', { pin, playerCount: userIds.length, roundCount: userIds.length });
     return this.prisma.client.game.create({
       data: {
         room: {
@@ -51,6 +53,7 @@ export class GameService {
   }
 
   calculateResults(game: Awaited<ReturnType<GameService['findOne']>>) {
+    Sentry.logger.info('Results calculated', { gameId: game.id, roundCount: game.rounds.length });
     const scoreMap = new Map<
       string,
       { user: (typeof game.users)[number]; score: number }
@@ -75,6 +78,7 @@ export class GameService {
   }
 
   detachRoom(id: number) {
+    Sentry.logger.info('Game finished', { gameId: id });
     return this.prisma.client.game.update({
       data: {
         roomId: null,

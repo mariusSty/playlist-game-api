@@ -8,6 +8,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { MusicApiService } from 'src/pick/musicapi.service';
 import { RoomService } from 'src/room/room.service';
 import { AssignSongDto } from './dto/assign-song.dto';
@@ -47,6 +48,7 @@ export class PickController {
     const allPicked = room && room.users.length === picks.length;
     let firstPickId: number | undefined;
     if (allPicked) {
+      Sentry.logger.info('All players have picked', { pin, roundId: assignSongDto.roundId, pickCount: picks.length });
       const firstPick = await this.pickService.getFirstWithoutVotes(pin);
       firstPickId = firstPick?.id;
     }

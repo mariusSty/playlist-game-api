@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { HealthIndicatorService } from '@nestjs/terminus';
 import { PrismaService } from 'src/prisma.service';
 
@@ -15,6 +16,7 @@ export class PrismaHealthIndicator {
       await this.prisma.client.user.findFirst({ select: { id: true } });
       return indicator.up();
     } catch (error) {
+      Sentry.logger.error('Database health check failed', { error: error.message });
       return indicator.down({ message: error.message });
     }
   }

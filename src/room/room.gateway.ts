@@ -5,6 +5,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import * as Sentry from '@sentry/nestjs';
 import { Server, Socket } from 'socket.io';
 import { RoomService } from './room.service';
 
@@ -25,6 +26,7 @@ export class RoomGateway {
     const isMember = room.users.some((u) => u.id === data.userId);
     if (!isMember) return;
 
+    Sentry.logger.info('Player subscribed to room channel', { pin: data.pin, userId: data.userId });
     client.join(data.pin);
   }
 
@@ -37,6 +39,7 @@ export class RoomGateway {
   }
 
   emitRoomUpdated(pin: string, users: any[], hostId: string) {
+    Sentry.logger.info('Room update emitted', { pin, userCount: users.length, hostId });
     this.server.to(pin).emit('room:updated', {
       users,
       hostId,
