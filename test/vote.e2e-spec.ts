@@ -139,15 +139,15 @@ describe('VoteController (e2e)', () => {
   }
 
   describe('POST /vote', () => {
-    it('should create a vote and emit vote:updated without nextPickId', async () => {
+    it('should create a vote and emit game:stateChanged', async () => {
       const { pin, picks } = await createRoomGameAndPicks('host-1', 'Host', [
         { id: 'guest-1', name: 'Guest' },
       ]);
 
       const wsClient = await connectWs(pin, 'host-1');
 
-      const voteUpdatedPromise = new Promise<any>((resolve) => {
-        wsClient.on('vote:updated', (data) => resolve(data));
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
       // host-1 votes on the first pick, guessing it belongs to guest-1
@@ -161,10 +161,8 @@ describe('VoteController (e2e)', () => {
         })
         .expect(201);
 
-      const wsData = await voteUpdatedPromise;
-      expect(wsData.users).toEqual(['host-1']);
-      // Not everyone voted yet → no nextPickId
-      expect(wsData.nextPickId).toBeUndefined();
+      // Verify WebSocket event was emitted
+      await gameStateChangedPromise;
 
       // Verify vote was persisted
       const vote = await prisma.vote.findUnique({
@@ -178,7 +176,7 @@ describe('VoteController (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit vote:updated with nextPickId when everyone has voted and there is a next pick', async () => {
+    it('should emit game:stateChanged when everyone has voted', async () => {
       const { pin, picks } = await createRoomGameAndPicks('host-2', 'Host', [
         { id: 'guest-2', name: 'Guest' },
       ]);
@@ -196,11 +194,9 @@ describe('VoteController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for vote:updated with all voters
-      const allVotedPromise = new Promise<any>((resolve) => {
-        wsClient.on('vote:updated', (data) => {
-          if (data.users.length === 2) resolve(data);
-        });
+      // Listen for game:stateChanged
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
       // Second vote
@@ -214,17 +210,12 @@ describe('VoteController (e2e)', () => {
         })
         .expect(201);
 
-      const wsData = await allVotedPromise;
-      expect(wsData.users).toHaveLength(2);
-      expect(wsData.users).toContain('host-2');
-      expect(wsData.users).toContain('guest-2');
-      // Everyone voted → nextPickId should be the second pick
-      expect(wsData.nextPickId).toBe(picks[1].id);
+      await gameStateChangedPromise;
 
       wsClient.disconnect();
     });
 
-    it('should emit vote:updated with nextPickId null when all picks are voted', async () => {
+    it('should emit game:stateChanged when all picks are voted', async () => {
       const { pin, picks } = await createRoomGameAndPicks('host-2b', 'Host', [
         { id: 'guest-2b', name: 'Guest' },
       ]);
@@ -244,12 +235,9 @@ describe('VoteController (e2e)', () => {
           .expect(201);
       }
 
-      // Listen for the final vote:updated (last pick, all voted)
-      const lastVotePromise = new Promise<any>((resolve) => {
-        wsClient.on('vote:updated', (data) => {
-          if (data.users.length === 2 && data.nextPickId === null)
-            resolve(data);
-        });
+      // Listen for game:stateChanged on last vote
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
       // Last user votes on last pick
@@ -265,15 +253,14 @@ describe('VoteController (e2e)', () => {
           .expect(201);
       }
 
-      const wsData = await lastVotePromise;
-      expect(wsData.nextPickId).toBeNull();
+      await gameStateChangedPromise;
 
       wsClient.disconnect();
     });
   });
 
   describe('DELETE /vote/:pickId/:userId', () => {
-    it('should remove a vote and emit vote:updated with remaining voters', async () => {
+    it('should remove a vote and emit game:stateChanged', async () => {
       const { pin, picks } = await createRoomGameAndPicks('host-3', 'Host', [
         { id: 'guest-3', name: 'Guest' },
       ]);
@@ -301,11 +288,9 @@ describe('VoteController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for vote:updated after cancel
-      const cancelPromise = new Promise<any>((resolve) => {
-        wsClient.on('vote:updated', (data) => {
-          if (data.users.length === 1) resolve(data);
-        });
+      // Listen for game:stateChanged after cancel
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
       // Cancel guest's vote
@@ -314,8 +299,7 @@ describe('VoteController (e2e)', () => {
         .query({ pin })
         .expect(200);
 
-      const wsData = await cancelPromise;
-      expect(wsData.users).toEqual(['host-3']);
+      await gameStateChangedPromise;
 
       // Verify vote was deleted from DB
       const deletedVote = await prisma.vote.findUnique({
@@ -328,7 +312,7 @@ describe('VoteController (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit vote:updated with empty users when all votes are canceled', async () => {
+    it('should emit game:stateChanged when all votes are canceled', async () => {
       const { pin, picks } = await createRoomGameAndPicks('host-4', 'Host', [
         { id: 'guest-4', name: 'Guest' },
       ]);
@@ -346,11 +330,9 @@ describe('VoteController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for vote:updated after cancel
-      const cancelPromise = new Promise<any>((resolve) => {
-        wsClient.on('vote:updated', (data) => {
-          if (data.users.length === 0) resolve(data);
-        });
+      // Listen for game:stateChanged after cancel
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
       // Cancel the only vote
@@ -359,8 +341,7 @@ describe('VoteController (e2e)', () => {
         .query({ pin })
         .expect(200);
 
-      const wsData = await cancelPromise;
-      expect(wsData.users).toEqual([]);
+      await gameStateChangedPromise;
 
       wsClient.disconnect();
     });

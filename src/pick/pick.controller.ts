@@ -8,9 +8,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import * as Sentry from '@sentry/nestjs';
 import { MusicApiService } from 'src/pick/musicapi.service';
-import { RoomService } from 'src/room/room.service';
 import { AssignSongDto } from './dto/assign-song.dto';
 import { PickGateway } from './pick.gateway';
 import { PickService } from './pick.service';
@@ -20,7 +18,6 @@ export class PickController {
   constructor(
     private readonly pickService: PickService,
     private readonly musicApiService: MusicApiService,
-    private readonly roomService: RoomService,
     private readonly pickGateway: PickGateway,
   ) {}
 
@@ -40,19 +37,7 @@ export class PickController {
     @Query('pin') pin: string,
   ) {
     await this.pickService.assignTrack(assignSongDto);
-    const [picks, room] = await Promise.all([
-      this.pickService.getByRoundId(assignSongDto.roundId),
-      this.roomService.findOne(pin),
-    ]);
-    const users = picks.map((pick) => pick.user.id);
-    const allPicked = room && room.users.length === picks.length;
-    let firstPickId: number | undefined;
-    if (allPicked) {
-      Sentry.logger.info('All players have picked', { pin, roundId: assignSongDto.roundId, pickCount: picks.length });
-      const firstPick = await this.pickService.getFirstWithoutVotes(pin);
-      firstPickId = firstPick?.id;
-    }
-    this.pickGateway.emitPickUpdated(pin, users, firstPickId);
+    this.pickGateway.emitGameStateChanged(pin);
     return { success: true };
   }
 
@@ -63,11 +48,7 @@ export class PickController {
     @Query('pin') pin: string,
   ) {
     await this.pickService.remove(roundId, userId);
-    const picks = await this.pickService.getByRoundId(roundId);
-    this.pickGateway.emitPickUpdated(
-      pin,
-      picks.map((pick) => pick.user.id),
-    );
+    this.pickGateway.emitGameStateChanged(pin);
     return { success: true };
   }
 }

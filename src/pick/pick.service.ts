@@ -107,6 +107,12 @@ export class PickService {
       },
       include: {
         track: true,
+        votes: {
+          include: {
+            guessUser: true,
+            guessedUser: true,
+          },
+        },
       },
     });
   }

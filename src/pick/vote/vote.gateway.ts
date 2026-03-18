@@ -6,9 +6,8 @@ import { Server } from 'socket.io';
 export class VoteGateway {
   @WebSocketServer() server: Server;
 
-  emitVoteUpdated(pin: string, users: string[], nextPickId?: number | null) {
-    const allVoted = nextPickId !== undefined;
-    Sentry.logger.info('Vote update emitted', { pin, voterCount: users.length, allVoted, nextPickId: nextPickId ?? null });
-    this.server.to(pin).emit('vote:updated', { users, nextPickId });
+  emitGameStateChanged(pin: string) {
+    Sentry.logger.info('Game state changed event emitted (from vote)', { pin });
+    this.server.to(pin).emit('game:stateChanged');
   }
 }

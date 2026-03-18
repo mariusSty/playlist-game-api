@@ -45,11 +45,7 @@ export class GameController {
       firstRoundId: firstRound.id,
     });
 
-    this.gameGateway.emitGameStarted(createGameDto.pin, {
-      roundId: firstRound.id,
-      gameId: game.id,
-      pin: createGameDto.pin,
-    });
+    this.gameGateway.emitRoomStateChanged(createGameDto.pin);
 
     return { roundId: firstRound.id, gameId: game.id };
   }
@@ -57,6 +53,11 @@ export class GameController {
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.gameService.findOne(id);
+  }
+
+  @Get(':id/phase')
+  async getPhase(@Param('id', ParseIntPipe) id: number) {
+    return this.gameService.getPhase(id);
   }
 
   @Get(':id/result')
@@ -74,8 +75,17 @@ export class GameController {
 
   @Patch(':id/finish')
   async finish(@Param('id', ParseIntPipe) id: number) {
+    const game = await this.gameService.findWithRoom(id);
+    const pin = game.room?.pin;
+
     Sentry.logger.info('Game finished', { gameId: id });
     await this.gameService.detachRoom(id);
+
+    if (pin) {
+      this.gameGateway.emitGameStateChanged(pin);
+      this.gameGateway.emitRoomStateChanged(pin);
+    }
+
     return { finished: true };
   }
 }

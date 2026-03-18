@@ -6,11 +6,13 @@ import { Server } from 'socket.io';
 export class GameGateway {
   @WebSocketServer() server: Server;
 
-  emitGameStarted(
-    pin: string,
-    data: { roundId: number; gameId: number; pin: string },
-  ) {
-    Sentry.logger.info('Game started event emitted', { pin, gameId: data.gameId, firstRoundId: data.roundId });
-    this.server.to(pin).emit('game:started', data);
+  emitGameStateChanged(pin: string) {
+    Sentry.logger.info('Game state changed event emitted', { pin });
+    this.server.to(pin).emit('game:stateChanged');
+  }
+
+  emitRoomStateChanged(pin: string) {
+    Sentry.logger.info('Room state changed event emitted (from game)', { pin });
+    this.server.to(pin).emit('room:stateChanged');
   }
 }

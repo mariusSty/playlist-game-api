@@ -38,21 +38,6 @@ export class RoundService {
     });
   }
 
-  getNext(pin: string) {
-    return this.prisma.client.round.findFirst({
-      where: {
-        game: {
-          room: {
-            pin,
-          },
-        },
-        theme: {
-          equals: '',
-        },
-      },
-    });
-  }
-
   async update(id: number, theme: string) {
     Sentry.logger.info('Theme selected for round', { roundId: id, theme });
     return this.prisma.client.round.update({
@@ -62,6 +47,25 @@ export class RoundService {
       data: {
         theme,
       },
+    });
+  }
+
+  async markRevealCompleted(pin: string) {
+    // Find the current round (themed, not yet reveal-completed)
+    const round = await this.prisma.client.round.findFirst({
+      where: {
+        game: { room: { pin } },
+        theme: { not: '' },
+        revealCompleted: false,
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    if (!round) return null;
+
+    return this.prisma.client.round.update({
+      where: { id: round.id },
+      data: { revealCompleted: true },
     });
   }
 }

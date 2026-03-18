@@ -31,6 +31,7 @@ CREATE TABLE "Round" (
     "gameId" INTEGER NOT NULL,
     "themeMasterId" TEXT NOT NULL,
     "theme" TEXT NOT NULL,
+    "revealCompleted" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "Round_pkey" PRIMARY KEY ("id")
 );

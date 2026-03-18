@@ -53,20 +53,15 @@ export class RoundController {
       themeMasterId: pickThemeDto.userId,
       pin: pickThemeDto.pin,
     });
-    this.roundGateway.emitThemeUpdated(pickThemeDto.pin);
+    this.roundGateway.emitGameStateChanged(pickThemeDto.pin);
 
     return updated;
   }
 
   @Post('next')
   async nextRound(@Query('pin') pin: string) {
-    const round = await this.roundService.getNext(pin);
-    Sentry.logger.info('Next round resolved', {
-      pin,
-      nextRoundId: round?.id ?? null,
-      isGameOver: !round,
-    });
-    this.roundGateway.emitRoundCompleted(pin, round?.id);
-    return { nextRoundId: round?.id ?? null };
+    await this.roundService.markRevealCompleted(pin);
+    this.roundGateway.emitGameStateChanged(pin);
+    return;
   }
 }

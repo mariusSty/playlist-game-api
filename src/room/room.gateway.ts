@@ -26,7 +26,10 @@ export class RoomGateway {
     const isMember = room.users.some((u) => u.id === data.userId);
     if (!isMember) return;
 
-    Sentry.logger.info('Player subscribed to room channel', { pin: data.pin, userId: data.userId });
+    Sentry.logger.info('Player subscribed to room channel', {
+      pin: data.pin,
+      userId: data.userId,
+    });
     client.join(data.pin);
   }
 
@@ -38,12 +41,8 @@ export class RoomGateway {
     client.leave(data.pin);
   }
 
-  emitRoomUpdated(pin: string, users: any[], hostId: string) {
-    Sentry.logger.info('Room update emitted', { pin, userCount: users.length, hostId });
-    this.server.to(pin).emit('room:updated', {
-      users,
-      hostId,
-      pin,
-    });
+  emitRoomStateChanged(pin: string) {
+    Sentry.logger.info('Room state changed event emitted', { pin });
+    this.server.to(pin).emit('room:stateChanged');
   }
 }

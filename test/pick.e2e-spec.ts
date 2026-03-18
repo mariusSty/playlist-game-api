@@ -119,15 +119,15 @@ describe('PickController (e2e)', () => {
   }
 
   describe('POST /pick', () => {
-    it('should assign a track and emit pick:updated with the user id', async () => {
+    it('should assign a track and emit game:stateChanged', async () => {
       const { pin, firstRoundId } = await createRoomAndGame('host-1', 'Host', [
         { id: 'guest-1', name: 'Guest' },
       ]);
 
       const wsClient = await connectWs(pin, 'host-1');
 
-      const pickUpdatedPromise = new Promise<any>((resolve) => {
-        wsClient.on('pick:updated', (data) => resolve(data));
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
       await request(app.getHttpServer())
@@ -140,10 +140,8 @@ describe('PickController (e2e)', () => {
         })
         .expect(201);
 
-      const wsData = await pickUpdatedPromise;
-      expect(wsData.users).toEqual(['host-1']);
-      // Not everyone picked yet → no firstPickId
-      expect(wsData.firstPickId).toBeUndefined();
+      // Verify WebSocket event was emitted
+      await gameStateChangedPromise;
 
       // Verify pick was persisted
       const pick = await prisma.pick.findUnique({
@@ -156,7 +154,7 @@ describe('PickController (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit pick:updated with firstPickId when everyone has picked', async () => {
+    it('should emit game:stateChanged when everyone has picked', async () => {
       const { pin, firstRoundId } = await createRoomAndGame('host-2', 'Host', [
         { id: 'guest-2', name: 'Guest' },
       ]);
@@ -174,11 +172,9 @@ describe('PickController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for the second pick:updated (all picked)
-      const allPickedPromise = new Promise<any>((resolve) => {
-        wsClient.on('pick:updated', (data) => {
-          if (data.users.length === 2) resolve(data);
-        });
+      // Listen for game:stateChanged on second pick
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
       // Second pick
@@ -192,19 +188,14 @@ describe('PickController (e2e)', () => {
         })
         .expect(201);
 
-      const wsData = await allPickedPromise;
-      expect(wsData.users).toHaveLength(2);
-      expect(wsData.users).toContain('host-2');
-      expect(wsData.users).toContain('guest-2');
-      // Everyone picked → firstPickId should be set
-      expect(wsData.firstPickId).toEqual(expect.any(Number));
+      await gameStateChangedPromise;
 
       wsClient.disconnect();
     });
   });
 
   describe('DELETE /pick/:roundId/:userId', () => {
-    it('should remove a pick and emit pick:updated with remaining users', async () => {
+    it('should remove a pick and emit game:stateChanged', async () => {
       const { pin, firstRoundId } = await createRoomAndGame('host-4', 'Host', [
         { id: 'guest-4', name: 'Guest' },
       ]);
@@ -232,11 +223,9 @@ describe('PickController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for pick:updated after cancel
-      const cancelPromise = new Promise<any>((resolve) => {
-        wsClient.on('pick:updated', (data) => {
-          if (data.users.length === 1) resolve(data);
-        });
+      // Listen for game:stateChanged after cancel
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
       // Cancel guest's pick
@@ -245,8 +234,7 @@ describe('PickController (e2e)', () => {
         .query({ pin })
         .expect(200);
 
-      const wsData = await cancelPromise;
-      expect(wsData.users).toEqual(['host-4']);
+      await gameStateChangedPromise;
 
       // Verify pick was deleted from DB
       const deletedPick = await prisma.pick.findUnique({
@@ -259,7 +247,7 @@ describe('PickController (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit pick:updated with empty users when all picks are canceled', async () => {
+    it('should emit game:stateChanged when all picks are canceled', async () => {
       const { pin, firstRoundId } = await createRoomAndGame('host-5', 'Host', [
         { id: 'guest-5', name: 'Guest' },
       ]);
@@ -277,11 +265,9 @@ describe('PickController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for pick:updated after cancel
-      const cancelPromise = new Promise<any>((resolve) => {
-        wsClient.on('pick:updated', (data) => {
-          if (data.users.length === 0) resolve(data);
-        });
+      // Listen for game:stateChanged after cancel
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
       // Cancel the only pick
@@ -290,8 +276,7 @@ describe('PickController (e2e)', () => {
         .query({ pin })
         .expect(200);
 
-      const wsData = await cancelPromise;
-      expect(wsData.users).toEqual([]);
+      await gameStateChangedPromise;
 
       wsClient.disconnect();
     });

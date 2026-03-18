@@ -50,13 +50,14 @@ model Game {
 }
 
 model Round {
-  id            Int    @id @default(autoincrement())
-  gameId        Int
-  game          Game   @relation(fields: [gameId], references: [id])
-  picks         Pick[]
-  themeMaster   User   @relation("themeMaster", fields: [themeMasterId], references: [id])
-  themeMasterId String
-  theme         String
+  id               Int     @id @default(autoincrement())
+  gameId           Int
+  game             Game    @relation(fields: [gameId], references: [id])
+  picks            Pick[]
+  themeMaster      User    @relation("themeMaster", fields: [themeMasterId], references: [id])
+  themeMasterId    String
+  theme            String
+  revealCompleted  Boolean @default(false)
 
   @@index([gameId])
   @@index([themeMasterId])

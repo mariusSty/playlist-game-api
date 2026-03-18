@@ -6,13 +6,10 @@ import { Server } from 'socket.io';
 export class RoundGateway {
   @WebSocketServer() server: Server;
 
-  emitThemeUpdated(pin: string) {
-    Sentry.logger.info('Theme update emitted', { pin });
-    this.server.to(pin).emit('round:themeUpdated');
-  }
-
-  emitRoundCompleted(pin: string, nextRoundId?: number) {
-    Sentry.logger.info('Round completed event emitted', { pin, nextRoundId: nextRoundId ?? null, isGameOver: !nextRoundId });
-    this.server.to(pin).emit('round:completed', { nextRoundId });
+  emitGameStateChanged(pin: string) {
+    Sentry.logger.info('Game state changed event emitted (from round)', {
+      pin,
+    });
+    this.server.to(pin).emit('game:stateChanged');
   }
 }

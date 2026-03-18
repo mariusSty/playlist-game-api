@@ -85,7 +85,7 @@ describe('GameController (e2e)', () => {
   }
 
   describe('POST /game', () => {
-    it('should create a game with rounds, assign themeMasters, and emit gameStarted', async () => {
+    it('should create a game with rounds, assign themeMasters, and emit room:stateChanged', async () => {
       const pin = await createRoomWithUsers('host-1', 'Host', [
         { id: 'guest-1', name: 'Alice' },
         { id: 'guest-2', name: 'Bob' },
@@ -101,8 +101,8 @@ describe('GameController (e2e)', () => {
       wsClient.emit('room:subscribe', { pin, userId: 'host-1' });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const gameStartedPromise = new Promise<any>((resolve) => {
-        wsClient.on('game:started', (data) => resolve(data));
+      const roomStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('room:stateChanged', () => resolve());
       });
 
       const response = await request(app.getHttpServer())
@@ -132,10 +132,7 @@ describe('GameController (e2e)', () => {
       expect(themeMasterIds).toEqual(['guest-1', 'guest-2', 'host-1'].sort());
 
       // Verify WebSocket event was emitted
-      const wsData = await gameStartedPromise;
-      expect(wsData.pin).toBe(pin);
-      expect(wsData.roundId).toBe(response.body.roundId);
-      expect(wsData.gameId).toBe(response.body.gameId);
+      await roomStateChangedPromise;
 
       wsClient.disconnect();
     });

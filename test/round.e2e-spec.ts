@@ -118,7 +118,7 @@ describe('RoundController (e2e)', () => {
   });
 
   describe('PATCH /round/:roundId', () => {
-    it('should update the theme and emit round:themeUpdated when called by the themeMaster', async () => {
+    it('should update the theme and emit game:stateChanged when called by the themeMaster', async () => {
       const { pin, firstRoundId } = await createRoomAndGame('host-1', 'Host', [
         { id: 'guest-1', name: 'Guest' },
       ]);
@@ -138,8 +138,8 @@ describe('RoundController (e2e)', () => {
       wsClient.emit('room:subscribe', { pin, userId: round.themeMasterId });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const themeUpdatedPromise = new Promise<void>((resolve) => {
-        wsClient.on('round:themeUpdated', () => resolve());
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
       // ThemeMaster picks the theme
@@ -160,7 +160,7 @@ describe('RoundController (e2e)', () => {
       expect(updated.theme).toBe('Summer Vibes');
 
       // Verify WebSocket event was emitted
-      await themeUpdatedPromise;
+      await gameStateChangedPromise;
 
       wsClient.disconnect();
     });
@@ -202,14 +202,14 @@ describe('RoundController (e2e)', () => {
   });
 
   describe('POST /round/next', () => {
-    it('should return the next round and emit round:completed with nextRoundId', async () => {
+    it('should mark round reveal completed and emit game:stateChanged', async () => {
       const { pin, firstRoundId } = await createRoomAndGame(
         'host-next-1',
         'Host',
         [{ id: 'guest-next-1', name: 'Guest' }],
       );
 
-      // Set theme on first round so getNext returns the second one
+      // Set theme on first round so it becomes the active round
       const firstRound = await prisma.round.findUnique({
         where: { id: firstRoundId },
       });
@@ -230,35 +230,37 @@ describe('RoundController (e2e)', () => {
       });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const roundCompletedPromise = new Promise<any>((resolve) => {
-        wsClient.on('round:completed', (data) => resolve(data));
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
-      const response = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post(`/round/next?pin=${pin}`)
         .expect(201);
 
-      expect(response.body.nextRoundId).toEqual(expect.any(Number));
-      expect(response.body.nextRoundId).not.toBe(firstRoundId);
+      // Verify the round was marked as reveal completed
+      const updated = await prisma.round.findUnique({
+        where: { id: firstRoundId },
+      });
+      expect(updated.revealCompleted).toBe(true);
 
-      // Verify WebSocket event was emitted with the nextRoundId
-      const wsData = await roundCompletedPromise;
-      expect(wsData.nextRoundId).toBe(response.body.nextRoundId);
+      // Verify WebSocket event was emitted
+      await gameStateChangedPromise;
 
       wsClient.disconnect();
     });
 
-    it('should return null nextRoundId and emit round:completed without nextRoundId when no rounds left', async () => {
+    it('should emit game:stateChanged even when no active round to mark', async () => {
       const { pin } = await createRoomAndGame('host-next-2', 'Host', [
         { id: 'guest-next-2', name: 'Guest' },
       ]);
 
-      // Mark all rounds as having a theme (= completed)
+      // Mark all rounds as completed
       await prisma.round.updateMany({
         where: {
           game: { room: { pin } },
         },
-        data: { theme: 'Done' },
+        data: { theme: 'Done', revealCompleted: true },
       });
 
       // Connect a WebSocket client and subscribe to the room
@@ -270,19 +272,16 @@ describe('RoundController (e2e)', () => {
       wsClient.emit('room:subscribe', { pin, userId: 'host-next-2' });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const roundCompletedPromise = new Promise<any>((resolve) => {
-        wsClient.on('round:completed', (data) => resolve(data));
+      const gameStateChangedPromise = new Promise<void>((resolve) => {
+        wsClient.on('game:stateChanged', () => resolve());
       });
 
-      const response = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post(`/round/next?pin=${pin}`)
         .expect(201);
 
-      expect(response.body.nextRoundId).toBeNull();
-
-      // Verify WebSocket event was emitted without nextRoundId
-      const wsData = await roundCompletedPromise;
-      expect(wsData.nextRoundId).toBeUndefined();
+      // Verify WebSocket event was emitted
+      await gameStateChangedPromise;
 
       wsClient.disconnect();
     });
