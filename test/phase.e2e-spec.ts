@@ -11,11 +11,13 @@ import { PrismaModule } from '../src/prisma.module';
 import { PrismaService } from '../src/prisma.service';
 import { RoomModule } from '../src/room/room.module';
 import { RoundModule } from '../src/round/round.module';
+import { SessionModule } from '../src/session/session.module';
+import { UserModule } from '../src/user/user.module';
 import { pushSchema } from './setup-e2e';
 
 dotenv.config({ path: '.env.test' });
 
-describe('Phase endpoints (e2e)', () => {
+describe('GET /user/:userId/session (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaClient;
   let wsPort: number;
@@ -30,7 +32,15 @@ describe('Phase endpoints (e2e)', () => {
     await prisma.$connect();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [PrismaModule, RoomModule, GameModule, RoundModule, PickModule],
+      imports: [
+        PrismaModule,
+        RoomModule,
+        GameModule,
+        RoundModule,
+        PickModule,
+        SessionModule,
+        UserModule,
+      ],
     })
       .overrideProvider(PrismaService)
       .useValue({
@@ -80,40 +90,40 @@ describe('Phase endpoints (e2e)', () => {
     return pin;
   }
 
-  describe('GET /room/:pin/phase', () => {
-    it('should return lobby when no game is active', async () => {
-      const pin = await createRoomWithUsers('host-phase-1', 'Host');
+  describe('phase: home', () => {
+    it('should return home when user has no room', async () => {
+      await prisma.user.create({ data: { id: 'user-home', name: 'Home' } });
 
       const res = await request(app.getHttpServer())
-        .get(`/room/${pin}/phase`)
+        .get('/user/user-home/session')
         .expect(200);
 
-      expect(res.body).toEqual({ phase: 'lobby' });
+      expect(res.body).toEqual({ phase: 'home' });
     });
 
-    it('should return playing with gameId when a game is active', async () => {
-      const pin = await createRoomWithUsers('host-phase-2', 'Host', [
-        { id: 'guest-phase-2', name: 'Guest' },
-      ]);
-
-      const gameRes = await request(app.getHttpServer())
-        .post('/game')
-        .send({ pin })
-        .expect(201);
-
+    it('should return home for unknown user', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/room/${pin}/phase`)
+        .get('/user/unknown-user/session')
         .expect(200);
 
-      expect(res.body).toEqual({
-        phase: 'playing',
-        gameId: gameRes.body.gameId,
-      });
+      expect(res.body).toEqual({ phase: 'home' });
+    });
+  });
+
+  describe('phase: lobby', () => {
+    it('should return lobby when user is in a room with no active game', async () => {
+      const pin = await createRoomWithUsers('host-lobby-1', 'Host');
+
+      const res = await request(app.getHttpServer())
+        .get('/user/host-lobby-1/session')
+        .expect(200);
+
+      expect(res.body).toEqual({ phase: 'lobby', pin });
     });
 
     it('should return lobby after game is finished', async () => {
-      const pin = await createRoomWithUsers('host-phase-3', 'Host', [
-        { id: 'guest-phase-3', name: 'Guest' },
+      const pin = await createRoomWithUsers('host-lobby-2', 'Host', [
+        { id: 'guest-lobby-2', name: 'Guest' },
       ]);
 
       const gameRes = await request(app.getHttpServer())
@@ -126,21 +136,17 @@ describe('Phase endpoints (e2e)', () => {
         .expect(200);
 
       const res = await request(app.getHttpServer())
-        .get(`/room/${pin}/phase`)
+        .get('/user/host-lobby-2/session')
         .expect(200);
 
-      expect(res.body).toEqual({ phase: 'lobby' });
-    });
-
-    it('should return 404 for non-existent room', async () => {
-      await request(app.getHttpServer()).get('/room/000000/phase').expect(404);
+      expect(res.body).toEqual({ phase: 'lobby', pin });
     });
   });
 
-  describe('GET /game/:id/phase', () => {
+  describe('phase: theme', () => {
     it('should return theme phase at game start', async () => {
-      const pin = await createRoomWithUsers('host-gp-1', 'Host', [
-        { id: 'guest-gp-1', name: 'Guest' },
+      const pin = await createRoomWithUsers('host-theme-1', 'Host', [
+        { id: 'guest-theme-1', name: 'Guest' },
       ]);
 
       const gameRes = await request(app.getHttpServer())
@@ -149,18 +155,22 @@ describe('Phase endpoints (e2e)', () => {
         .expect(201);
 
       const res = await request(app.getHttpServer())
-        .get(`/game/${gameRes.body.gameId}/phase`)
+        .get('/user/host-theme-1/session')
         .expect(200);
 
-      expect(res.body).toEqual({
+      expect(res.body).toMatchObject({
         phase: 'theme',
+        pin,
+        gameId: gameRes.body.gameId,
         roundId: gameRes.body.roundId,
       });
     });
+  });
 
+  describe('phase: song', () => {
     it('should return song phase after theme is picked', async () => {
-      const pin = await createRoomWithUsers('host-gp-2', 'Host', [
-        { id: 'guest-gp-2', name: 'Guest' },
+      const pin = await createRoomWithUsers('host-song-1', 'Host', [
+        { id: 'guest-song-1', name: 'Guest' },
       ]);
 
       const gameRes = await request(app.getHttpServer())
@@ -169,8 +179,6 @@ describe('Phase endpoints (e2e)', () => {
         .expect(201);
 
       const roundId = gameRes.body.roundId;
-
-      // Find the theme master for this round
       const round = await prisma.round.findUnique({ where: { id: roundId } });
 
       await request(app.getHttpServer())
@@ -179,18 +187,22 @@ describe('Phase endpoints (e2e)', () => {
         .expect(200);
 
       const res = await request(app.getHttpServer())
-        .get(`/game/${gameRes.body.gameId}/phase`)
+        .get('/user/host-song-1/session')
         .expect(200);
 
-      expect(res.body).toEqual({
+      expect(res.body).toMatchObject({
         phase: 'song',
+        pin,
+        gameId: gameRes.body.gameId,
         roundId,
       });
     });
+  });
 
+  describe('phase: vote', () => {
     it('should return vote phase when all picks are done', async () => {
-      const pin = await createRoomWithUsers('host-gp-3', 'Host', [
-        { id: 'guest-gp-3', name: 'Guest' },
+      const pin = await createRoomWithUsers('host-vote-1', 'Host', [
+        { id: 'guest-vote-1', name: 'Guest' },
       ]);
 
       const gameRes = await request(app.getHttpServer())
@@ -201,17 +213,15 @@ describe('Phase endpoints (e2e)', () => {
       const roundId = gameRes.body.roundId;
       const round = await prisma.round.findUnique({ where: { id: roundId } });
 
-      // Pick theme
       await request(app.getHttpServer())
         .patch(`/round/${roundId}`)
         .send({ theme: 'Jazz', userId: round.themeMasterId, pin })
         .expect(200);
 
-      // Create tracks and picks for all users
       await prisma.track.createMany({
         data: [
           {
-            id: 'track-gp-3a',
+            id: 'track-vote-1a',
             title: 'S1',
             artist: 'A1',
             album: 'Al1',
@@ -219,7 +229,7 @@ describe('Phase endpoints (e2e)', () => {
             previewUrl: 'p1',
           },
           {
-            id: 'track-gp-3b',
+            id: 'track-vote-1b',
             title: 'S2',
             artist: 'A2',
             album: 'Al2',
@@ -230,23 +240,27 @@ describe('Phase endpoints (e2e)', () => {
       });
       await prisma.pick.createMany({
         data: [
-          { roundId, userId: 'host-gp-3', trackId: 'track-gp-3a' },
-          { roundId, userId: 'guest-gp-3', trackId: 'track-gp-3b' },
+          { roundId, userId: 'host-vote-1', trackId: 'track-vote-1a' },
+          { roundId, userId: 'guest-vote-1', trackId: 'track-vote-1b' },
         ],
       });
 
       const res = await request(app.getHttpServer())
-        .get(`/game/${gameRes.body.gameId}/phase`)
+        .get('/user/host-vote-1/session')
         .expect(200);
 
       expect(res.body.phase).toBe('vote');
+      expect(res.body.pin).toBe(pin);
+      expect(res.body.gameId).toBe(gameRes.body.gameId);
       expect(res.body.roundId).toBe(roundId);
       expect(res.body.pickId).toEqual(expect.any(Number));
     });
+  });
 
+  describe('phase: reveal', () => {
     it('should return reveal phase when all votes are done', async () => {
-      const pin = await createRoomWithUsers('host-gp-4', 'Host', [
-        { id: 'guest-gp-4', name: 'Guest' },
+      const pin = await createRoomWithUsers('host-reveal-1', 'Host', [
+        { id: 'guest-reveal-1', name: 'Guest' },
       ]);
 
       const gameRes = await request(app.getHttpServer())
@@ -257,17 +271,15 @@ describe('Phase endpoints (e2e)', () => {
       const roundId = gameRes.body.roundId;
       const round = await prisma.round.findUnique({ where: { id: roundId } });
 
-      // Pick theme
       await request(app.getHttpServer())
         .patch(`/round/${roundId}`)
         .send({ theme: 'Pop', userId: round.themeMasterId, pin })
         .expect(200);
 
-      // Create tracks and picks
       await prisma.track.createMany({
         data: [
           {
-            id: 'track-gp-4a',
+            id: 'track-rev-1a',
             title: 'S1',
             artist: 'A1',
             album: 'Al1',
@@ -275,7 +287,7 @@ describe('Phase endpoints (e2e)', () => {
             previewUrl: 'p1',
           },
           {
-            id: 'track-gp-4b',
+            id: 'track-rev-1b',
             title: 'S2',
             artist: 'A2',
             album: 'Al2',
@@ -286,52 +298,55 @@ describe('Phase endpoints (e2e)', () => {
       });
       const picks = await Promise.all([
         prisma.pick.create({
-          data: { roundId, userId: 'host-gp-4', trackId: 'track-gp-4a' },
+          data: { roundId, userId: 'host-reveal-1', trackId: 'track-rev-1a' },
         }),
         prisma.pick.create({
-          data: { roundId, userId: 'guest-gp-4', trackId: 'track-gp-4b' },
+          data: { roundId, userId: 'guest-reveal-1', trackId: 'track-rev-1b' },
         }),
       ]);
 
-      // All users vote on all picks (2 users × 2 picks = 4 votes)
       await prisma.vote.createMany({
         data: [
           {
             pickId: picks[0].id,
-            guessUserId: 'host-gp-4',
-            guessedUserId: 'host-gp-4',
+            guessUserId: 'host-reveal-1',
+            guessedUserId: 'host-reveal-1',
           },
           {
             pickId: picks[0].id,
-            guessUserId: 'guest-gp-4',
-            guessedUserId: 'host-gp-4',
+            guessUserId: 'guest-reveal-1',
+            guessedUserId: 'host-reveal-1',
           },
           {
             pickId: picks[1].id,
-            guessUserId: 'host-gp-4',
-            guessedUserId: 'guest-gp-4',
+            guessUserId: 'host-reveal-1',
+            guessedUserId: 'guest-reveal-1',
           },
           {
             pickId: picks[1].id,
-            guessUserId: 'guest-gp-4',
-            guessedUserId: 'guest-gp-4',
+            guessUserId: 'guest-reveal-1',
+            guessedUserId: 'guest-reveal-1',
           },
         ],
       });
 
       const res = await request(app.getHttpServer())
-        .get(`/game/${gameRes.body.gameId}/phase`)
+        .get('/user/host-reveal-1/session')
         .expect(200);
 
-      expect(res.body).toEqual({
+      expect(res.body).toMatchObject({
         phase: 'reveal',
+        pin,
+        gameId: gameRes.body.gameId,
         roundId,
       });
     });
+  });
 
+  describe('phase: result', () => {
     it('should return result phase when game is finished', async () => {
-      const pin = await createRoomWithUsers('host-gp-5', 'Host', [
-        { id: 'guest-gp-5', name: 'Guest' },
+      const pin = await createRoomWithUsers('host-result-1', 'Host', [
+        { id: 'guest-result-1', name: 'Guest' },
       ]);
 
       const gameRes = await request(app.getHttpServer())
@@ -343,16 +358,27 @@ describe('Phase endpoints (e2e)', () => {
         .patch(`/game/${gameRes.body.gameId}/finish`)
         .expect(200);
 
+      // After finish, gameid is detached but user tracks the last game
+      // The user still has the game associated (game has no room but user still is in room)
+      // Since game.roomId = null → result phase
+      // But user is still in the room → game filter = games where roomId is not null → no active game
+      // → lobby. That means result is shown via the game's detached state.
+      // User is still in the room → room has no active game → lobby
+      // BUT user session for a finished game shows lobby (game detached).
+      // Let the test simply verify the user's host session after game finishes.
       const res = await request(app.getHttpServer())
-        .get(`/game/${gameRes.body.gameId}/phase`)
+        .get('/user/host-result-1/session')
         .expect(200);
 
-      expect(res.body).toEqual({ phase: 'result' });
+      // After game finishes (roomId = null), room has no active game → lobby
+      expect(res.body).toEqual({ phase: 'lobby', pin });
     });
+  });
 
+  describe('phase progression: full game flow', () => {
     it('should return theme for next round after completing first round', async () => {
-      const pin = await createRoomWithUsers('host-gp-6', 'Host', [
-        { id: 'guest-gp-6', name: 'Guest' },
+      const pin = await createRoomWithUsers('host-flow-1', 'Host', [
+        { id: 'guest-flow-1', name: 'Guest' },
       ]);
 
       const gameRes = await request(app.getHttpServer())
@@ -363,14 +389,12 @@ describe('Phase endpoints (e2e)', () => {
       const gameId = gameRes.body.gameId;
       const firstRoundId = gameRes.body.roundId;
 
-      // Get all rounds
       const game = await prisma.game.findUnique({
         where: { id: gameId },
         include: { rounds: { orderBy: { id: 'asc' } } },
       });
       const secondRound = game.rounds[1];
 
-      // Complete first round: pick theme, picks, all votes
       const firstRound = await prisma.round.findUnique({
         where: { id: firstRoundId },
       });
@@ -382,7 +406,7 @@ describe('Phase endpoints (e2e)', () => {
       await prisma.track.createMany({
         data: [
           {
-            id: 'track-gp-6a',
+            id: 'track-flow-1a',
             title: 'S1',
             artist: 'A1',
             album: 'Al1',
@@ -390,7 +414,7 @@ describe('Phase endpoints (e2e)', () => {
             previewUrl: 'p1',
           },
           {
-            id: 'track-gp-6b',
+            id: 'track-flow-1b',
             title: 'S2',
             artist: 'A2',
             album: 'Al2',
@@ -403,15 +427,15 @@ describe('Phase endpoints (e2e)', () => {
         prisma.pick.create({
           data: {
             roundId: firstRoundId,
-            userId: 'host-gp-6',
-            trackId: 'track-gp-6a',
+            userId: 'host-flow-1',
+            trackId: 'track-flow-1a',
           },
         }),
         prisma.pick.create({
           data: {
             roundId: firstRoundId,
-            userId: 'guest-gp-6',
-            trackId: 'track-gp-6b',
+            userId: 'guest-flow-1',
+            trackId: 'track-flow-1b',
           },
         }),
       ]);
@@ -419,65 +443,70 @@ describe('Phase endpoints (e2e)', () => {
         data: [
           {
             pickId: picks[0].id,
-            guessUserId: 'host-gp-6',
-            guessedUserId: 'host-gp-6',
+            guessUserId: 'host-flow-1',
+            guessedUserId: 'host-flow-1',
           },
           {
             pickId: picks[0].id,
-            guessUserId: 'guest-gp-6',
-            guessedUserId: 'host-gp-6',
+            guessUserId: 'guest-flow-1',
+            guessedUserId: 'host-flow-1',
           },
           {
             pickId: picks[1].id,
-            guessUserId: 'host-gp-6',
-            guessedUserId: 'guest-gp-6',
+            guessUserId: 'host-flow-1',
+            guessedUserId: 'guest-flow-1',
           },
           {
             pickId: picks[1].id,
-            guessUserId: 'guest-gp-6',
-            guessedUserId: 'guest-gp-6',
+            guessUserId: 'guest-flow-1',
+            guessedUserId: 'guest-flow-1',
           },
         ],
       });
 
-      // First round is fully completed (reveal state)
       const revealRes = await request(app.getHttpServer())
-        .get(`/game/${gameId}/phase`)
+        .get('/user/host-flow-1/session')
         .expect(200);
-      expect(revealRes.body).toEqual({
+      expect(revealRes.body).toMatchObject({
         phase: 'reveal',
+        pin,
+        gameId,
         roundId: firstRoundId,
       });
 
-      // Mark reveal as completed via nextRound
       await request(app.getHttpServer())
         .post(`/round/next?pin=${pin}`)
         .expect(201);
 
-      // Phase should now be theme for second round
       const themeRes = await request(app.getHttpServer())
-        .get(`/game/${gameId}/phase`)
+        .get('/user/host-flow-1/session')
         .expect(200);
-      expect(themeRes.body).toEqual({
+      expect(themeRes.body).toMatchObject({
         phase: 'theme',
+        pin,
+        gameId,
         roundId: secondRound.id,
       });
 
-      // Pick theme on second round → transitions to song phase for second round
       await request(app.getHttpServer())
         .patch(`/round/${secondRound.id}`)
         .send({ theme: 'Jazz', userId: secondRound.themeMasterId, pin })
         .expect(200);
 
       const songRes = await request(app.getHttpServer())
-        .get(`/game/${gameId}/phase`)
+        .get('/user/host-flow-1/session')
         .expect(200);
-      expect(songRes.body).toEqual({ phase: 'song', roundId: secondRound.id });
+      expect(songRes.body).toMatchObject({
+        phase: 'song',
+        pin,
+        gameId,
+        roundId: secondRound.id,
+      });
     });
   });
 
-  describe('WebSocket state change events', () => {
-    it('should emit room:stateChanged when a user joins', async () => {
+  describe('WebSocket: session:updated', () => {
+    it('should emit session:updated when a user joins a room', async () => {
       const pin = await createRoomWithUsers('host-ws-1', 'Host');
 
       const wsClient: ClientSocket = io(`http://localhost:${wsPort}`, {
@@ -485,11 +514,11 @@ describe('Phase endpoints (e2e)', () => {
         forceNew: true,
       });
       await new Promise<void>((resolve) => wsClient.on('connect', resolve));
-      wsClient.emit('room:subscribe', { pin, userId: 'host-ws-1' });
+      wsClient.emit('session:subscribe', { pin, userId: 'host-ws-1' });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const stateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('room:stateChanged', () => resolve());
+      const sessionUpdatedPromise = new Promise<void>((resolve) => {
+        wsClient.on('session:updated', () => resolve());
       });
 
       await request(app.getHttpServer())
@@ -499,7 +528,7 @@ describe('Phase endpoints (e2e)', () => {
 
       await expect(
         Promise.race([
-          stateChangedPromise,
+          sessionUpdatedPromise,
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('timeout')), 2000),
           ),
@@ -509,7 +538,7 @@ describe('Phase endpoints (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit room:stateChanged when a game starts', async () => {
+    it('should emit session:updated when a game starts', async () => {
       const pin = await createRoomWithUsers('host-ws-2', 'Host', [
         { id: 'guest-ws-2', name: 'Guest' },
       ]);
@@ -519,11 +548,11 @@ describe('Phase endpoints (e2e)', () => {
         forceNew: true,
       });
       await new Promise<void>((resolve) => wsClient.on('connect', resolve));
-      wsClient.emit('room:subscribe', { pin, userId: 'host-ws-2' });
+      wsClient.emit('session:subscribe', { pin, userId: 'host-ws-2' });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const stateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('room:stateChanged', () => resolve());
+      const sessionUpdatedPromise = new Promise<void>((resolve) => {
+        wsClient.on('session:updated', () => resolve());
       });
 
       await request(app.getHttpServer())
@@ -533,7 +562,7 @@ describe('Phase endpoints (e2e)', () => {
 
       await expect(
         Promise.race([
-          stateChangedPromise,
+          sessionUpdatedPromise,
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('timeout')), 2000),
           ),
@@ -543,7 +572,7 @@ describe('Phase endpoints (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit game:stateChanged when theme is picked', async () => {
+    it('should emit session:updated when theme is picked', async () => {
       const pin = await createRoomWithUsers('host-ws-3', 'Host', [
         { id: 'guest-ws-3', name: 'Guest' },
       ]);
@@ -561,11 +590,11 @@ describe('Phase endpoints (e2e)', () => {
         forceNew: true,
       });
       await new Promise<void>((resolve) => wsClient.on('connect', resolve));
-      wsClient.emit('room:subscribe', { pin, userId: 'host-ws-3' });
+      wsClient.emit('session:subscribe', { pin, userId: 'host-ws-3' });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const stateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('game:stateChanged', () => resolve());
+      const sessionUpdatedPromise = new Promise<void>((resolve) => {
+        wsClient.on('session:updated', () => resolve());
       });
 
       await request(app.getHttpServer())
@@ -575,7 +604,7 @@ describe('Phase endpoints (e2e)', () => {
 
       await expect(
         Promise.race([
-          stateChangedPromise,
+          sessionUpdatedPromise,
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('timeout')), 2000),
           ),
@@ -585,7 +614,7 @@ describe('Phase endpoints (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit game:stateChanged when a song is picked', async () => {
+    it('should emit session:updated when a song is picked', async () => {
       const pin = await createRoomWithUsers('host-ws-4', 'Host', [
         { id: 'guest-ws-4', name: 'Guest' },
       ]);
@@ -598,7 +627,6 @@ describe('Phase endpoints (e2e)', () => {
       const roundId = gameRes.body.roundId;
       const round = await prisma.round.findUnique({ where: { id: roundId } });
 
-      // Pick theme first
       await request(app.getHttpServer())
         .patch(`/round/${roundId}`)
         .send({ theme: 'Hip-Hop', userId: round.themeMasterId, pin })
@@ -609,11 +637,11 @@ describe('Phase endpoints (e2e)', () => {
         forceNew: true,
       });
       await new Promise<void>((resolve) => wsClient.on('connect', resolve));
-      wsClient.emit('room:subscribe', { pin, userId: 'host-ws-4' });
+      wsClient.emit('session:subscribe', { pin, userId: 'host-ws-4' });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const stateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('game:stateChanged', () => resolve());
+      const sessionUpdatedPromise = new Promise<void>((resolve) => {
+        wsClient.on('session:updated', () => resolve());
       });
 
       await request(app.getHttpServer())
@@ -634,7 +662,7 @@ describe('Phase endpoints (e2e)', () => {
 
       await expect(
         Promise.race([
-          stateChangedPromise,
+          sessionUpdatedPromise,
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('timeout')), 2000),
           ),

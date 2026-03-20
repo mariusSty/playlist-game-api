@@ -8,6 +8,7 @@ import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaModule } from '../src/prisma.module';
 import { PrismaService } from '../src/prisma.service';
 import { RoomModule } from '../src/room/room.module';
+import { SessionModule } from '../src/session/session.module';
 import { pushSchema } from './setup-e2e';
 
 dotenv.config({ path: '.env.test' });
@@ -31,7 +32,7 @@ describe('RoomController (e2e)', () => {
     // Build the NestJS app, overriding PrismaService with the test client
     const testClient = prisma;
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [PrismaModule, RoomModule],
+      imports: [PrismaModule, SessionModule, RoomModule],
     })
       .overrideProvider(PrismaService)
       .useValue({
@@ -167,7 +168,7 @@ describe('RoomController (e2e)', () => {
       }
     });
 
-    it('should connect a new user to an existing room and emit room:updated', async () => {
+    it('should connect a new user to an existing room and emit session:updated', async () => {
       // Create a room
       const createRes = await request(app.getHttpServer())
         .post('/room')
@@ -185,18 +186,14 @@ describe('RoomController (e2e)', () => {
       await new Promise<void>((resolve) => wsClient.on('connect', resolve));
 
       // Subscribe — host is a member, so it should be accepted
-      wsClient.emit('room:subscribe', { pin, userId: 'host-1' });
+      wsClient.emit('session:subscribe', { pin, userId: 'host-1' });
 
       // Wait for the subscribe to be processed
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // Set up listener for the room:updated event
-      const userListPromise = new Promise<any>((resolve) => {
-        wsClient.on('room:updated', (data) => {
-          if (data.users?.length === 2) {
-            resolve(data);
-          }
-        });
+      // Set up listener for the session:updated signal
+      const signalPromise = new Promise<void>((resolve) => {
+        wsClient.on('session:updated', resolve);
       });
 
       // Connect a second user via PATCH
@@ -205,11 +202,16 @@ describe('RoomController (e2e)', () => {
         .send({ id: 'guest-1', name: 'Guest' })
         .expect(200);
 
-      // Verify WebSocket event was emitted
-      const wsData = await userListPromise;
-      expect(wsData.pin).toBe(pin);
-      expect(wsData.hostId).toBe('host-1');
-      expect(wsData.users).toHaveLength(2);
+      // Verify WebSocket signal was received
+      await signalPromise;
+
+      // Re-fetch room state via HTTP to verify
+      const roomRes = await request(app.getHttpServer())
+        .get(`/room/${pin}`)
+        .expect(200);
+      expect(roomRes.body.pin).toBe(pin);
+      expect(roomRes.body.hostId).toBe('host-1');
+      expect(roomRes.body.users).toHaveLength(2);
 
       // Verify both users are in the room in DB
       const room = await prisma.room.findUnique({
@@ -221,7 +223,7 @@ describe('RoomController (e2e)', () => {
       expect(userIds).toEqual(['guest-1', 'host-1']);
     });
 
-    it('should reject room:subscribe for a user not in the room', async () => {
+    it('should reject session:subscribe for a user not in the room', async () => {
       // Create a room
       const createRes = await request(app.getHttpServer())
         .post('/room')
@@ -237,12 +239,12 @@ describe('RoomController (e2e)', () => {
       await new Promise<void>((resolve) => wsClient.on('connect', resolve));
 
       // Try to subscribe with a userId that is NOT in the room
-      wsClient.emit('room:subscribe', { pin, userId: 'stranger' });
+      wsClient.emit('session:subscribe', { pin, userId: 'stranger' });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // The stranger should NOT receive room:updated when a guest joins
+      // The stranger should NOT receive session:updated when a guest joins
       let received = false;
-      wsClient.on('room:updated', () => {
+      wsClient.on('session:updated', () => {
         received = true;
       });
 
@@ -273,7 +275,7 @@ describe('RoomController (e2e)', () => {
       }
     });
 
-    it('should disconnect a user and emit room:updated', async () => {
+    it('should disconnect a user and emit session:updated', async () => {
       // Create a room with a host
       const createRes = await request(app.getHttpServer())
         .post('/room')
@@ -293,14 +295,12 @@ describe('RoomController (e2e)', () => {
         forceNew: true,
       });
       await new Promise<void>((resolve) => wsClient.on('connect', resolve));
-      wsClient.emit('room:subscribe', { pin, userId: 'host-leave' });
+      wsClient.emit('session:subscribe', { pin, userId: 'host-leave' });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // Listen for userList after the leave
-      const userListPromise = new Promise<any>((resolve) => {
-        wsClient.on('room:updated', (data) => {
-          if (data.users?.length === 1) resolve(data);
-        });
+      // Listen for session:updated signal after the leave
+      const signalPromise = new Promise<void>((resolve) => {
+        wsClient.on('session:updated', resolve);
       });
 
       // Guest leaves
@@ -311,11 +311,16 @@ describe('RoomController (e2e)', () => {
       expect(response.body.hostId).toBe('host-leave');
       expect(response.body.users).toHaveLength(1);
 
-      // Verify WebSocket event
-      const wsData = await userListPromise;
-      expect(wsData.pin).toBe(pin);
-      expect(wsData.users).toHaveLength(1);
-      expect(wsData.hostId).toBe('host-leave');
+      // Verify WebSocket signal was received
+      await signalPromise;
+
+      // Re-fetch room state to confirm
+      const roomRes = await request(app.getHttpServer())
+        .get(`/room/${pin}`)
+        .expect(200);
+      expect(roomRes.body.pin).toBe(pin);
+      expect(roomRes.body.users).toHaveLength(1);
+      expect(roomRes.body.hostId).toBe('host-leave');
     });
 
     it('should transfer host when the host leaves', async () => {

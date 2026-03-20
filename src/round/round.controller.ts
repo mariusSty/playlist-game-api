@@ -11,15 +11,15 @@ import {
   Query,
 } from '@nestjs/common';
 import * as Sentry from '@sentry/nestjs';
+import { SessionGateway } from 'src/session/session.gateway';
 import { PickThemeDto } from './dto/pick-theme.dto';
-import { RoundGateway } from './round.gateway';
 import { RoundService } from './round.service';
 
 @Controller('round')
 export class RoundController {
   constructor(
     private readonly roundService: RoundService,
-    private readonly roundGateway: RoundGateway,
+    private readonly sessionGateway: SessionGateway,
   ) {}
 
   @Get(':roundId')
@@ -53,7 +53,7 @@ export class RoundController {
       themeMasterId: pickThemeDto.userId,
       pin: pickThemeDto.pin,
     });
-    this.roundGateway.emitGameStateChanged(pickThemeDto.pin);
+    this.sessionGateway.emitSessionUpdated(pickThemeDto.pin);
 
     return updated;
   }
@@ -61,7 +61,7 @@ export class RoundController {
   @Post('next')
   async nextRound(@Query('pin') pin: string) {
     await this.roundService.markRevealCompleted(pin);
-    this.roundGateway.emitGameStateChanged(pin);
+    this.sessionGateway.emitSessionUpdated(pin);
     return;
   }
 }

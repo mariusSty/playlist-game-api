@@ -8,14 +8,14 @@ import {
   Query,
 } from '@nestjs/common';
 import { CreateVoteDto } from 'src/pick/dto/create-vote.dto';
-import { VoteGateway } from './vote.gateway';
+import { SessionGateway } from 'src/session/session.gateway';
 import { VoteService } from './vote.service';
 
 @Controller('vote')
 export class VoteController {
   constructor(
     private readonly voteService: VoteService,
-    private readonly voteGateway: VoteGateway,
+    private readonly sessionGateway: SessionGateway,
   ) {}
 
   @Post()
@@ -24,7 +24,7 @@ export class VoteController {
     @Query('pin') pin: string,
   ) {
     await this.voteService.create(createVoteDto);
-    this.voteGateway.emitGameStateChanged(pin);
+    this.sessionGateway.emitSessionUpdated(pin);
     return { success: true };
   }
 
@@ -35,7 +35,7 @@ export class VoteController {
     @Query('pin') pin: string,
   ) {
     await this.voteService.remove(pickId, userId);
-    this.voteGateway.emitGameStateChanged(pin);
+    this.sessionGateway.emitSessionUpdated(pin);
     return { success: true };
   }
 }

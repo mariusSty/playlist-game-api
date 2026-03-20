@@ -10,6 +10,7 @@ import { PickModule } from '../src/pick/pick.module';
 import { PrismaModule } from '../src/prisma.module';
 import { PrismaService } from '../src/prisma.service';
 import { RoomModule } from '../src/room/room.module';
+import { SessionModule } from '../src/session/session.module';
 import { pushSchema } from './setup-e2e';
 
 dotenv.config({ path: '.env.test' });
@@ -29,7 +30,13 @@ describe('VoteController (e2e)', () => {
     await prisma.$connect();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [PrismaModule, RoomModule, GameModule, PickModule],
+      imports: [
+        PrismaModule,
+        SessionModule,
+        RoomModule,
+        GameModule,
+        PickModule,
+      ],
     })
       .overrideProvider(PrismaService)
       .useValue({
@@ -132,14 +139,14 @@ describe('VoteController (e2e)', () => {
         forceNew: true,
       });
       client.on('connect', () => {
-        client.emit('room:subscribe', { pin, userId });
+        client.emit('session:subscribe', { pin, userId });
         setTimeout(() => resolve(client), 100);
       });
     });
   }
 
   describe('POST /vote', () => {
-    it('should create a vote and emit game:stateChanged', async () => {
+    it('should create a vote and emit session:updated', async () => {
       const { pin, picks } = await createRoomGameAndPicks('host-1', 'Host', [
         { id: 'guest-1', name: 'Guest' },
       ]);
@@ -147,7 +154,7 @@ describe('VoteController (e2e)', () => {
       const wsClient = await connectWs(pin, 'host-1');
 
       const gameStateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('game:stateChanged', () => resolve());
+        wsClient.on('session:updated', () => resolve());
       });
 
       // host-1 votes on the first pick, guessing it belongs to guest-1
@@ -176,7 +183,7 @@ describe('VoteController (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit game:stateChanged when everyone has voted', async () => {
+    it('should emit session:updated when everyone has voted', async () => {
       const { pin, picks } = await createRoomGameAndPicks('host-2', 'Host', [
         { id: 'guest-2', name: 'Guest' },
       ]);
@@ -194,9 +201,9 @@ describe('VoteController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for game:stateChanged
+      // Listen for session:updated
       const gameStateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('game:stateChanged', () => resolve());
+        wsClient.on('session:updated', () => resolve());
       });
 
       // Second vote
@@ -215,7 +222,7 @@ describe('VoteController (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit game:stateChanged when all picks are voted', async () => {
+    it('should emit session:updated when all picks are voted', async () => {
       const { pin, picks } = await createRoomGameAndPicks('host-2b', 'Host', [
         { id: 'guest-2b', name: 'Guest' },
       ]);
@@ -235,9 +242,9 @@ describe('VoteController (e2e)', () => {
           .expect(201);
       }
 
-      // Listen for game:stateChanged on last vote
+      // Listen for session:updated on last vote
       const gameStateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('game:stateChanged', () => resolve());
+        wsClient.on('session:updated', () => resolve());
       });
 
       // Last user votes on last pick
@@ -260,7 +267,7 @@ describe('VoteController (e2e)', () => {
   });
 
   describe('DELETE /vote/:pickId/:userId', () => {
-    it('should remove a vote and emit game:stateChanged', async () => {
+    it('should remove a vote and emit session:updated', async () => {
       const { pin, picks } = await createRoomGameAndPicks('host-3', 'Host', [
         { id: 'guest-3', name: 'Guest' },
       ]);
@@ -288,9 +295,9 @@ describe('VoteController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for game:stateChanged after cancel
+      // Listen for session:updated after cancel
       const gameStateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('game:stateChanged', () => resolve());
+        wsClient.on('session:updated', () => resolve());
       });
 
       // Cancel guest's vote
@@ -312,7 +319,7 @@ describe('VoteController (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit game:stateChanged when all votes are canceled', async () => {
+    it('should emit session:updated when all votes are canceled', async () => {
       const { pin, picks } = await createRoomGameAndPicks('host-4', 'Host', [
         { id: 'guest-4', name: 'Guest' },
       ]);
@@ -330,9 +337,9 @@ describe('VoteController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for game:stateChanged after cancel
+      // Listen for session:updated after cancel
       const gameStateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('game:stateChanged', () => resolve());
+        wsClient.on('session:updated', () => resolve());
       });
 
       // Cancel the only vote

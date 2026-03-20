@@ -10,9 +10,9 @@ import {
   Post,
 } from '@nestjs/common';
 import * as Sentry from '@sentry/nestjs';
+import { SessionGateway } from 'src/session/session.gateway';
 import { UserService } from 'src/user/user.service';
 import { CreateRoomDto } from './dto/create-room.dto';
-import { RoomGateway } from './room.gateway';
 import { RoomService } from './room.service';
 
 @Controller('room')
@@ -20,7 +20,7 @@ export class RoomController {
   constructor(
     private readonly roomService: RoomService,
     private readonly userService: UserService,
-    private readonly roomGateway: RoomGateway,
+    private readonly sessionGateway: SessionGateway,
   ) {}
 
   @Post()
@@ -48,11 +48,6 @@ export class RoomController {
     return room;
   }
 
-  @Get(':pin/phase')
-  getPhase(@Param('pin') pin: string) {
-    return this.roomService.getPhase(pin);
-  }
-
   @Get(':pin')
   findOne(@Param('pin') pin: string) {
     return this.roomService.findOne(pin);
@@ -72,7 +67,7 @@ export class RoomController {
       name,
       totalPlayers: room.users.length,
     });
-    this.roomGateway.emitRoomStateChanged(pin);
+    this.sessionGateway.emitSessionUpdated(pin);
     return room;
   }
 
@@ -115,7 +110,7 @@ export class RoomController {
       remainingPlayers: remainingUsers.length,
       hostId,
     });
-    this.roomGateway.emitRoomStateChanged(pin);
+    this.sessionGateway.emitSessionUpdated(pin);
 
     return { users: remainingUsers, hostId };
   }

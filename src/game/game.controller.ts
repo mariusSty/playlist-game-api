@@ -11,8 +11,8 @@ import {
 } from '@nestjs/common';
 import * as Sentry from '@sentry/nestjs';
 import { RoomService } from 'src/room/room.service';
+import { SessionGateway } from 'src/session/session.gateway';
 import { CreateGameDto } from './dto/create-game.dto';
-import { GameGateway } from './game.gateway';
 import { GameService } from './game.service';
 
 @Controller('game')
@@ -20,7 +20,7 @@ export class GameController {
   constructor(
     private readonly gameService: GameService,
     private readonly roomService: RoomService,
-    private readonly gameGateway: GameGateway,
+    private readonly sessionGateway: SessionGateway,
   ) {}
 
   @Post()
@@ -45,7 +45,7 @@ export class GameController {
       firstRoundId: firstRound.id,
     });
 
-    this.gameGateway.emitRoomStateChanged(createGameDto.pin);
+    this.sessionGateway.emitSessionUpdated(createGameDto.pin);
 
     return { roundId: firstRound.id, gameId: game.id };
   }
@@ -53,11 +53,6 @@ export class GameController {
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.gameService.findOne(id);
-  }
-
-  @Get(':id/phase')
-  async getPhase(@Param('id', ParseIntPipe) id: number) {
-    return this.gameService.getPhase(id);
   }
 
   @Get(':id/result')
@@ -82,8 +77,7 @@ export class GameController {
     await this.gameService.detachRoom(id);
 
     if (pin) {
-      this.gameGateway.emitGameStateChanged(pin);
-      this.gameGateway.emitRoomStateChanged(pin);
+      this.sessionGateway.emitSessionUpdated(pin);
     }
 
     return { finished: true };

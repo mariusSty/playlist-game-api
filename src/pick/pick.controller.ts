@@ -9,8 +9,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { MusicApiService } from 'src/pick/musicapi.service';
+import { SessionGateway } from 'src/session/session.gateway';
 import { AssignSongDto } from './dto/assign-song.dto';
-import { PickGateway } from './pick.gateway';
 import { PickService } from './pick.service';
 
 @Controller('pick')
@@ -18,7 +18,7 @@ export class PickController {
   constructor(
     private readonly pickService: PickService,
     private readonly musicApiService: MusicApiService,
-    private readonly pickGateway: PickGateway,
+    private readonly sessionGateway: SessionGateway,
   ) {}
 
   @Get(':pickId')
@@ -37,7 +37,7 @@ export class PickController {
     @Query('pin') pin: string,
   ) {
     await this.pickService.assignTrack(assignSongDto);
-    this.pickGateway.emitGameStateChanged(pin);
+    this.sessionGateway.emitSessionUpdated(pin);
     return { success: true };
   }
 
@@ -48,7 +48,7 @@ export class PickController {
     @Query('pin') pin: string,
   ) {
     await this.pickService.remove(roundId, userId);
-    this.pickGateway.emitGameStateChanged(pin);
+    this.sessionGateway.emitSessionUpdated(pin);
     return { success: true };
   }
 }

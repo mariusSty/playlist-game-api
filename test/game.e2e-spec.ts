@@ -9,6 +9,7 @@ import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaModule } from '../src/prisma.module';
 import { PrismaService } from '../src/prisma.service';
 import { RoomModule } from '../src/room/room.module';
+import { SessionModule } from '../src/session/session.module';
 import { pushSchema } from './setup-e2e';
 
 dotenv.config({ path: '.env.test' });
@@ -28,7 +29,7 @@ describe('GameController (e2e)', () => {
     await prisma.$connect();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [PrismaModule, RoomModule, GameModule],
+      imports: [PrismaModule, SessionModule, RoomModule, GameModule],
     })
       .overrideProvider(PrismaService)
       .useValue({
@@ -85,7 +86,7 @@ describe('GameController (e2e)', () => {
   }
 
   describe('POST /game', () => {
-    it('should create a game with rounds, assign themeMasters, and emit room:stateChanged', async () => {
+    it('should create a game with rounds, assign themeMasters, and emit session:updated', async () => {
       const pin = await createRoomWithUsers('host-1', 'Host', [
         { id: 'guest-1', name: 'Alice' },
         { id: 'guest-2', name: 'Bob' },
@@ -98,11 +99,11 @@ describe('GameController (e2e)', () => {
       });
 
       await new Promise<void>((resolve) => wsClient.on('connect', resolve));
-      wsClient.emit('room:subscribe', { pin, userId: 'host-1' });
+      wsClient.emit('session:subscribe', { pin, userId: 'host-1' });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       const roomStateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('room:stateChanged', () => resolve());
+        wsClient.on('session:updated', () => resolve());
       });
 
       const response = await request(app.getHttpServer())

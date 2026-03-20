@@ -10,6 +10,7 @@ import { PickModule } from '../src/pick/pick.module';
 import { PrismaModule } from '../src/prisma.module';
 import { PrismaService } from '../src/prisma.service';
 import { RoomModule } from '../src/room/room.module';
+import { SessionModule } from '../src/session/session.module';
 import { pushSchema } from './setup-e2e';
 
 dotenv.config({ path: '.env.test' });
@@ -29,7 +30,13 @@ describe('PickController (e2e)', () => {
     await prisma.$connect();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [PrismaModule, RoomModule, GameModule, PickModule],
+      imports: [
+        PrismaModule,
+        SessionModule,
+        RoomModule,
+        GameModule,
+        PickModule,
+      ],
     })
       .overrideProvider(PrismaService)
       .useValue({
@@ -101,7 +108,7 @@ describe('PickController (e2e)', () => {
         forceNew: true,
       });
       client.on('connect', () => {
-        client.emit('room:subscribe', { pin, userId });
+        client.emit('session:subscribe', { pin, userId });
         setTimeout(() => resolve(client), 100);
       });
     });
@@ -119,7 +126,7 @@ describe('PickController (e2e)', () => {
   }
 
   describe('POST /pick', () => {
-    it('should assign a track and emit game:stateChanged', async () => {
+    it('should assign a track and emit session:updated', async () => {
       const { pin, firstRoundId } = await createRoomAndGame('host-1', 'Host', [
         { id: 'guest-1', name: 'Guest' },
       ]);
@@ -127,7 +134,7 @@ describe('PickController (e2e)', () => {
       const wsClient = await connectWs(pin, 'host-1');
 
       const gameStateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('game:stateChanged', () => resolve());
+        wsClient.on('session:updated', () => resolve());
       });
 
       await request(app.getHttpServer())
@@ -154,7 +161,7 @@ describe('PickController (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit game:stateChanged when everyone has picked', async () => {
+    it('should emit session:updated when everyone has picked', async () => {
       const { pin, firstRoundId } = await createRoomAndGame('host-2', 'Host', [
         { id: 'guest-2', name: 'Guest' },
       ]);
@@ -172,9 +179,9 @@ describe('PickController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for game:stateChanged on second pick
+      // Listen for session:updated on second pick
       const gameStateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('game:stateChanged', () => resolve());
+        wsClient.on('session:updated', () => resolve());
       });
 
       // Second pick
@@ -195,7 +202,7 @@ describe('PickController (e2e)', () => {
   });
 
   describe('DELETE /pick/:roundId/:userId', () => {
-    it('should remove a pick and emit game:stateChanged', async () => {
+    it('should remove a pick and emit session:updated', async () => {
       const { pin, firstRoundId } = await createRoomAndGame('host-4', 'Host', [
         { id: 'guest-4', name: 'Guest' },
       ]);
@@ -223,9 +230,9 @@ describe('PickController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for game:stateChanged after cancel
+      // Listen for session:updated after cancel
       const gameStateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('game:stateChanged', () => resolve());
+        wsClient.on('session:updated', () => resolve());
       });
 
       // Cancel guest's pick
@@ -247,7 +254,7 @@ describe('PickController (e2e)', () => {
       wsClient.disconnect();
     });
 
-    it('should emit game:stateChanged when all picks are canceled', async () => {
+    it('should emit session:updated when all picks are canceled', async () => {
       const { pin, firstRoundId } = await createRoomAndGame('host-5', 'Host', [
         { id: 'guest-5', name: 'Guest' },
       ]);
@@ -265,9 +272,9 @@ describe('PickController (e2e)', () => {
         })
         .expect(201);
 
-      // Listen for game:stateChanged after cancel
+      // Listen for session:updated after cancel
       const gameStateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('game:stateChanged', () => resolve());
+        wsClient.on('session:updated', () => resolve());
       });
 
       // Cancel the only pick

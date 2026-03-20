@@ -9,17 +9,20 @@ import { HealthModule } from './health/health.module';
 import { PickModule } from './pick/pick.module';
 import { RoomModule } from './room/room.module';
 import { RoundModule } from './round/round.module';
-import { UserService } from './user/user.service';
+import { SessionModule } from './session/session.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
     SentryModule.forRoot(),
     PrismaModule,
     HealthModule,
+    SessionModule,
     RoomModule,
     GameModule,
     RoundModule,
     PickModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [
@@ -28,7 +31,6 @@ import { UserService } from './user/user.service';
       useClass: SentryGlobalFilter,
     },
     AppService,
-    UserService,
   ],
 })
 export class AppModule {}

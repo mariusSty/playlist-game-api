@@ -1,34 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import * as Sentry from '@sentry/nestjs';
 import { PrismaService } from 'src/prisma.service';
-import { RoomPhase } from './types/room-phase.type';
 
 @Injectable()
 export class RoomService {
   constructor(private prisma: PrismaService) {}
-
-  async getPhase(pin: string): Promise<RoomPhase> {
-    const room = await this.prisma.client.room.findUnique({
-      where: { pin },
-      include: {
-        games: {
-          orderBy: { id: 'desc' as const },
-          take: 1,
-        },
-      },
-    });
-
-    if (!room) {
-      throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
-    }
-
-    const activeGame = room.games[0];
-    if (!activeGame) {
-      return { phase: 'lobby' };
-    }
-
-    return { phase: 'playing', gameId: activeGame.id };
-  }
 
   findByHostId(hostId: string) {
     return this.prisma.client.room.findUnique({
