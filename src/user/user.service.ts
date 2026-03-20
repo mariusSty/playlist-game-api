@@ -37,7 +37,10 @@ export class UserService {
                   orderBy: { id: 'asc' as const },
                   include: {
                     picks: {
-                      orderBy: { id: 'asc' as const },
+                      orderBy: [
+                        { position: 'asc' as const },
+                        { id: 'asc' as const },
+                      ],
                       include: { votes: true },
                     },
                   },

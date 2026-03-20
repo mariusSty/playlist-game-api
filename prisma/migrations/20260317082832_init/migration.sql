@@ -42,6 +42,7 @@ CREATE TABLE "Pick" (
     "roundId" INTEGER NOT NULL,
     "trackId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
+    "position" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "Pick_pkey" PRIMARY KEY ("id")
 );

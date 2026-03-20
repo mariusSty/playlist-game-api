@@ -32,6 +32,7 @@ export class PickService {
         },
       },
       create: {
+        position: Math.floor(Math.random() * 1000000),
         user: {
           connect: {
             id: assignSongDto.userId,

@@ -50,28 +50,29 @@ model Game {
 }
 
 model Round {
-  id               Int     @id @default(autoincrement())
-  gameId           Int
-  game             Game    @relation(fields: [gameId], references: [id])
-  picks            Pick[]
-  themeMaster      User    @relation("themeMaster", fields: [themeMasterId], references: [id])
-  themeMasterId    String
-  theme            String
-  revealCompleted  Boolean @default(false)
+  id              Int     @id @default(autoincrement())
+  gameId          Int
+  game            Game    @relation(fields: [gameId], references: [id])
+  picks           Pick[]
+  themeMaster     User    @relation("themeMaster", fields: [themeMasterId], references: [id])
+  themeMasterId   String
+  theme           String
+  revealCompleted Boolean @default(false)
 
   @@index([gameId])
   @@index([themeMasterId])
 }
 
 model Pick {
-  id      Int    @id @default(autoincrement())
-  round   Round  @relation(fields: [roundId], references: [id])
-  roundId Int
-  track   Track  @relation(fields: [trackId], references: [id])
-  trackId String
-  user    User   @relation("pick", fields: [userId], references: [id])
-  userId  String
-  votes   Vote[]
+  id       Int    @id @default(autoincrement())
+  round    Round  @relation(fields: [roundId], references: [id])
+  roundId  Int
+  track    Track  @relation(fields: [trackId], references: [id])
+  trackId  String
+  user     User   @relation("pick", fields: [userId], references: [id])
+  userId   String
+  position Int    @default(0)
+  votes    Vote[]
 
   @@unique([roundId, userId])
   @@index([roundId])
@@ -95,7 +96,7 @@ model Vote {
 }
 
 model Track {
-  id         String  @unique @default(uuid())
+  id         String @unique @default(uuid())
   title      String
   artist     String
   album      String
