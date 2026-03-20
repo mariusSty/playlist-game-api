@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import * as Sentry from '@sentry/nestjs';
 import { AssignSongDto } from 'src/pick/dto/assign-song.dto';
 import { PrismaService } from 'src/prisma.service';
 
@@ -8,12 +7,6 @@ export class PickService {
   constructor(private readonly prisma: PrismaService) {}
 
   assignTrack(assignSongDto: AssignSongDto) {
-    Sentry.logger.info('Song picked', {
-      roundId: assignSongDto.roundId,
-      userId: assignSongDto.userId,
-      trackTitle: assignSongDto.track.title,
-      trackArtist: assignSongDto.track.artist,
-    });
     return this.prisma.client.pick.upsert({
       where: {
         roundId_userId: {
@@ -118,7 +111,6 @@ export class PickService {
   }
 
   remove(roundId: number, userId: string) {
-    Sentry.logger.info('Pick cancelled', { roundId, userId });
     return this.prisma.client.pick.delete({
       where: {
         roundId_userId: {

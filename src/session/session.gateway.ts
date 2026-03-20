@@ -45,12 +45,17 @@ export class SessionGateway implements OnGatewayDisconnect {
   @SubscribeMessage('session:unsubscribe')
   handleUnsubscribe(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { pin: string },
+    @MessageBody() data: { pin: string; userId: string },
   ) {
+    Sentry.logger.info('Player unsubscribed from session channel', {
+      pin: data.pin,
+      userId: data.userId,
+    });
     client.leave(data.pin);
   }
 
   handleDisconnect(client: Socket) {
+    Sentry.logger.info('Client disconnected', { socketId: client.id });
     for (const [userId, socketIds] of this.userSockets.entries()) {
       socketIds.delete(client.id);
       if (socketIds.size === 0) {

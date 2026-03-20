@@ -1,5 +1,4 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import * as Sentry from '@sentry/nestjs';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -19,7 +18,6 @@ export class RoomService {
   }
 
   async create(userId: string, pin: string) {
-    Sentry.logger.info('Room created', { pin, hostId: userId });
     return this.prisma.client.room.create({
       data: {
         pin,
@@ -58,7 +56,6 @@ export class RoomService {
   }
 
   async connect(pin: string, id: string) {
-    Sentry.logger.info('Player connecting to room', { pin, userId: id });
     try {
       return await this.prisma.client.room.update({
         where: {
@@ -77,13 +74,11 @@ export class RoomService {
         },
       });
     } catch (error) {
-      Sentry.logger.warn('Room not found', { pin });
       throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
     }
   }
 
   disconnect(pin: string, id: string) {
-    Sentry.logger.info('Player disconnected from room', { pin, userId: id });
     return this.prisma.client.room.update({
       where: {
         pin,
@@ -99,7 +94,6 @@ export class RoomService {
   }
 
   updateHost(pin: string, hostId: string) {
-    Sentry.logger.info('Room host transferred', { pin, newHostId: hostId });
     return this.prisma.client.room.update({
       where: {
         pin,
@@ -111,7 +105,6 @@ export class RoomService {
   }
 
   remove(id: number) {
-    Sentry.logger.info('Room deleted', { roomId: id });
     return this.prisma.client.room.delete({
       where: {
         id,

@@ -10,7 +10,6 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import * as Sentry from '@sentry/nestjs';
 import { SessionGateway } from 'src/session/session.gateway';
 import { PickThemeDto } from './dto/pick-theme.dto';
 import { RoundService } from './round.service';
@@ -47,12 +46,6 @@ export class RoundController {
 
     const updated = await this.roundService.update(roundId, pickThemeDto.theme);
 
-    Sentry.logger.info('Theme selected', {
-      roundId,
-      theme: pickThemeDto.theme,
-      themeMasterId: pickThemeDto.userId,
-      pin: pickThemeDto.pin,
-    });
     this.sessionGateway.emitSessionUpdated(pickThemeDto.pin);
 
     return updated;
