@@ -29,11 +29,6 @@ export class SessionGateway implements OnGatewayDisconnect {
     const isMember = room.users.some((u) => u.id === data.userId);
     if (!isMember) return;
 
-    Sentry.logger.info('Player subscribed to session channel', {
-      pin: data.pin,
-      userId: data.userId,
-    });
-
     client.join(data.pin);
 
     if (!this.userSockets.has(data.userId)) {
