@@ -91,4 +91,74 @@ export class GameService {
       },
     });
   }
+
+  findActiveByRoomPin(pin: string) {
+    return this.prisma.client.game.findFirst({
+      where: {
+        room: { pin },
+        roomId: { not: null },
+      },
+      include: { users: true },
+    });
+  }
+
+  async removeUser(gameId: number, userId: string) {
+    await this.prisma.client.$transaction(async (tx) => {
+      // 1. Delete unthemed rounds where this user is theme master (no picks/votes exist yet)
+      await tx.round.deleteMany({
+        where: {
+          gameId,
+          themeMasterId: userId,
+          theme: '',
+        },
+      });
+
+      // 2. Find non-completed active rounds (themed, not yet revealed)
+      const activeRounds = await tx.round.findMany({
+        where: {
+          gameId,
+          theme: { not: '' },
+          revealCompleted: false,
+        },
+        select: { id: true },
+      });
+      const activeRoundIds = activeRounds.map((r) => r.id);
+
+      if (activeRoundIds.length > 0) {
+        // Delete votes ON the leaving user's picks in active rounds
+        await tx.vote.deleteMany({
+          where: {
+            pick: {
+              userId,
+              roundId: { in: activeRoundIds },
+            },
+          },
+        });
+
+        // Delete votes BY the leaving user in active rounds
+        await tx.vote.deleteMany({
+          where: {
+            guessUserId: userId,
+            pick: { roundId: { in: activeRoundIds } },
+          },
+        });
+
+        // Delete the leaving user's picks in active rounds
+        await tx.pick.deleteMany({
+          where: {
+            userId,
+            roundId: { in: activeRoundIds },
+          },
+        });
+      }
+
+      // 3. Disconnect user from the game's users (m2m)
+      await tx.game.update({
+        where: { id: gameId },
+        data: {
+          users: { disconnect: { id: userId } },
+        },
+      });
+    });
+  }
 }

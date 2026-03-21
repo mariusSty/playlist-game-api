@@ -240,8 +240,18 @@ describe('GET /user/:userId/session (e2e)', () => {
       });
       await prisma.pick.createMany({
         data: [
-          { roundId, userId: 'host-vote-1', trackId: 'track-vote-1a' },
-          { roundId, userId: 'guest-vote-1', trackId: 'track-vote-1b' },
+          {
+            roundId,
+            userId: 'host-vote-1',
+            trackId: 'track-vote-1a',
+            position: 0,
+          },
+          {
+            roundId,
+            userId: 'guest-vote-1',
+            trackId: 'track-vote-1b',
+            position: 0,
+          },
         ],
       });
 
@@ -298,10 +308,20 @@ describe('GET /user/:userId/session (e2e)', () => {
       });
       const picks = await Promise.all([
         prisma.pick.create({
-          data: { roundId, userId: 'host-reveal-1', trackId: 'track-rev-1a' },
+          data: {
+            roundId,
+            userId: 'host-reveal-1',
+            trackId: 'track-rev-1a',
+            position: 0,
+          },
         }),
         prisma.pick.create({
-          data: { roundId, userId: 'guest-reveal-1', trackId: 'track-rev-1b' },
+          data: {
+            roundId,
+            userId: 'guest-reveal-1',
+            trackId: 'track-rev-1b',
+            position: 0,
+          },
         }),
       ]);
 
@@ -429,6 +449,7 @@ describe('GET /user/:userId/session (e2e)', () => {
             roundId: firstRoundId,
             userId: 'host-flow-1',
             trackId: 'track-flow-1a',
+            position: 0,
           },
         }),
         prisma.pick.create({
@@ -436,6 +457,7 @@ describe('GET /user/:userId/session (e2e)', () => {
             roundId: firstRoundId,
             userId: 'guest-flow-1',
             trackId: 'track-flow-1b',
+            position: 0,
           },
         }),
       ]);

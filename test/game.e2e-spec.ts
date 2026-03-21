@@ -230,13 +230,28 @@ describe('GameController (e2e)', () => {
       });
 
       const pick1 = await prisma.pick.create({
-        data: { roundId, userId: 'host-res-1', trackId: 'track-res-1' },
+        data: {
+          roundId,
+          userId: 'host-res-1',
+          trackId: 'track-res-1',
+          position: 0,
+        },
       });
       const pick2 = await prisma.pick.create({
-        data: { roundId, userId: 'guest-res-1', trackId: 'track-res-2' },
+        data: {
+          roundId,
+          userId: 'guest-res-1',
+          trackId: 'track-res-2',
+          position: 0,
+        },
       });
       const pick3 = await prisma.pick.create({
-        data: { roundId, userId: 'guest-res-2', trackId: 'track-res-3' },
+        data: {
+          roundId,
+          userId: 'guest-res-2',
+          trackId: 'track-res-3',
+          position: 0,
+        },
       });
 
       // Votes: guest-res-1 correctly guesses host-res-1's pick and guest-res-2's pick

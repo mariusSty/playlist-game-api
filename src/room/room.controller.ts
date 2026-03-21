@@ -5,10 +5,13 @@ import {
   Get,
   HttpException,
   HttpStatus,
+  Inject,
   Param,
   Patch,
   Post,
+  forwardRef,
 } from '@nestjs/common';
+import { GameService } from 'src/game/game.service';
 import { SessionGateway } from 'src/session/session.gateway';
 import { UserService } from 'src/user/user.service';
 import { CreateRoomDto } from './dto/create-room.dto';
@@ -20,6 +23,8 @@ export class RoomController {
     private readonly roomService: RoomService,
     private readonly userService: UserService,
     private readonly sessionGateway: SessionGateway,
+    @Inject(forwardRef(() => GameService))
+    private readonly gameService: GameService,
   ) {}
 
   @Post()
@@ -69,6 +74,14 @@ export class RoomController {
     const room = await this.roomService.findOne(pin);
     if (!room) {
       throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
+    }
+
+    // If there's an active game, clean up the leaving user's game data first
+    const activeGame = await this.gameService.findActiveByRoomPin(pin);
+    const isGameParticipant =
+      activeGame?.users.some((u) => u.id === userId) ?? false;
+    if (activeGame && isGameParticipant) {
+      await this.gameService.removeUser(activeGame.id, userId);
     }
 
     // Last user → delete the room entirely
