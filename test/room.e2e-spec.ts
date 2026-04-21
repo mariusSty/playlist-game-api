@@ -436,7 +436,7 @@ describe('RoomController (e2e)', () => {
         // Set theme directly in DB to move to song phase
         await prisma.round.update({
           where: { id: Number(firstRoundId) },
-          data: { theme: 'Rock' },
+          data: { customTheme: 'Rock' },
         });
 
         // Guest submits a pick
@@ -500,7 +500,7 @@ describe('RoomController (e2e)', () => {
         // Set theme directly in DB
         await prisma.round.update({
           where: { id: Number(firstRoundId) },
-          data: { theme: 'Jazz' },
+          data: { customTheme: 'Jazz' },
         });
 
         await prisma.track.createMany({

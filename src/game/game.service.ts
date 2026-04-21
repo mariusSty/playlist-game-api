@@ -23,7 +23,6 @@ export class GameService {
         rounds: {
           create: userIds.map((userId) => ({
             themeMasterId: userId,
-            theme: '',
           })),
         },
         users: {
@@ -109,7 +108,8 @@ export class GameService {
         where: {
           gameId,
           themeMasterId: userId,
-          theme: '',
+          themeId: null,
+          customTheme: null,
         },
       });
 
@@ -117,7 +117,7 @@ export class GameService {
       const activeRounds = await tx.round.findMany({
         where: {
           gameId,
-          theme: { not: '' },
+          OR: [{ themeId: { not: null } }, { customTheme: { not: null } }],
           revealCompleted: false,
         },
         select: { id: true },

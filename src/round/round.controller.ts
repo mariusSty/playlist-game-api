@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -44,7 +45,22 @@ export class RoundController {
       throw new ForbiddenException('Only the theme master can pick the theme');
     }
 
-    const updated = await this.roundService.update(roundId, pickThemeDto.theme);
+    const hasThemeId =
+      pickThemeDto.themeId !== undefined && pickThemeDto.themeId !== null;
+    const hasCustom =
+      typeof pickThemeDto.customTheme === 'string' &&
+      pickThemeDto.customTheme.trim().length > 0;
+
+    if (hasThemeId === hasCustom) {
+      throw new BadRequestException(
+        'Provide exactly one of themeId or customTheme',
+      );
+    }
+
+    const updated = await this.roundService.update(roundId, {
+      themeId: hasThemeId ? pickThemeDto.themeId : null,
+      customTheme: hasCustom ? pickThemeDto.customTheme!.trim() : null,
+    });
 
     this.sessionGateway.emitSessionUpdated(pickThemeDto.pin);
 

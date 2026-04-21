@@ -56,11 +56,20 @@ model Round {
   picks           Pick[]
   themeMaster     User    @relation("themeMaster", fields: [themeMasterId], references: [id])
   themeMasterId   String
-  theme           String
+  theme           Theme?  @relation(fields: [themeId], references: [id])
+  themeId         Int?
+  customTheme     String?
   revealCompleted Boolean @default(false)
 
   @@index([gameId])
   @@index([themeMasterId])
+  @@index([themeId])
+}
+
+model Theme {
+  id     Int     @id @default(autoincrement())
+  key    String  @unique
+  rounds Round[]
 }
 
 model Pick {

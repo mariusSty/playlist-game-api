@@ -1,5 +1,6 @@
 export class PickThemeDto {
-  theme: string;
+  themeId?: number;
+  customTheme?: string;
   userId: string;
   pin: string;
 }

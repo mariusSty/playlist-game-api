@@ -112,7 +112,8 @@ describe('RoundController (e2e)', () => {
 
       expect(response.body).toMatchObject({
         id: firstRoundId,
-        theme: '',
+        themeId: null,
+        customTheme: null,
       });
       expect(response.body.themeMaster).toBeDefined();
       expect(response.body.game).toBeDefined();
@@ -152,19 +153,19 @@ describe('RoundController (e2e)', () => {
       // ThemeMaster picks the theme
       const response = await request(app.getHttpServer())
         .patch(`/round/${firstRoundId}`)
-        .send({ theme: 'Summer Vibes', userId: round.themeMasterId, pin })
+        .send({ customTheme: 'Summer Vibes', userId: round.themeMasterId, pin })
         .expect(200);
 
       expect(response.body).toMatchObject({
         id: firstRoundId,
-        theme: 'Summer Vibes',
+        customTheme: 'Summer Vibes',
       });
 
       // Verify the round was updated in DB
       const updated = await prisma.round.findUnique({
         where: { id: firstRoundId },
       });
-      expect(updated.theme).toBe('Summer Vibes');
+      expect(updated.customTheme).toBe('Summer Vibes');
 
       // Verify WebSocket event was emitted
       await gameStateChangedPromise;
@@ -186,7 +187,7 @@ describe('RoundController (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .patch(`/round/${firstRoundId}`)
-        .send({ theme: 'Hacked Theme', userId: nonThemeMaster, pin })
+        .send({ customTheme: 'Hacked Theme', userId: nonThemeMaster, pin })
         .expect(403);
 
       expect(response.body.message).toBe(
@@ -197,13 +198,14 @@ describe('RoundController (e2e)', () => {
       const unchanged = await prisma.round.findUnique({
         where: { id: firstRoundId },
       });
-      expect(unchanged.theme).toBe('');
+      expect(unchanged.customTheme).toBeNull();
+      expect(unchanged.themeId).toBeNull();
     });
 
     it('should return 404 for a non-existent round', async () => {
       await request(app.getHttpServer())
         .patch('/round/99999')
-        .send({ theme: 'Whatever', userId: 'nobody', pin: '000000' })
+        .send({ customTheme: 'Whatever', userId: 'nobody', pin: '000000' })
         .expect(404);
     });
   });
@@ -222,7 +224,7 @@ describe('RoundController (e2e)', () => {
       });
       await prisma.round.update({
         where: { id: firstRoundId },
-        data: { theme: 'Done' },
+        data: { customTheme: 'Done' },
       });
 
       // Connect a WebSocket client and subscribe to the room
@@ -267,7 +269,7 @@ describe('RoundController (e2e)', () => {
         where: {
           game: { room: { pin } },
         },
-        data: { theme: 'Done', revealCompleted: true },
+        data: { customTheme: 'Done', revealCompleted: true },
       });
 
       // Connect a WebSocket client and subscribe to the room

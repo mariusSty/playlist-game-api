@@ -12,6 +12,7 @@ export class RoundService {
       },
       include: {
         themeMaster: true,
+        theme: true,
         game: {
           include: {
             room: {
@@ -37,13 +38,17 @@ export class RoundService {
     });
   }
 
-  async update(id: number, theme: string) {
+  async update(
+    id: number,
+    data: { themeId?: number | null; customTheme?: string | null },
+  ) {
     return this.prisma.client.round.update({
       where: {
         id,
       },
       data: {
-        theme,
+        themeId: data.themeId ?? null,
+        customTheme: data.customTheme ?? null,
       },
     });
   }
@@ -53,7 +58,7 @@ export class RoundService {
     const round = await this.prisma.client.round.findFirst({
       where: {
         game: { room: { pin } },
-        theme: { not: '' },
+        OR: [{ themeId: { not: null } }, { customTheme: { not: null } }],
         revealCompleted: false,
       },
       orderBy: { id: 'asc' },

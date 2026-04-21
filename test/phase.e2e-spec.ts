@@ -183,7 +183,7 @@ describe('GET /user/:userId/session (e2e)', () => {
 
       await request(app.getHttpServer())
         .patch(`/round/${roundId}`)
-        .send({ theme: 'Rock', userId: round.themeMasterId, pin })
+        .send({ customTheme: 'Rock', userId: round.themeMasterId, pin })
         .expect(200);
 
       const res = await request(app.getHttpServer())
@@ -215,7 +215,7 @@ describe('GET /user/:userId/session (e2e)', () => {
 
       await request(app.getHttpServer())
         .patch(`/round/${roundId}`)
-        .send({ theme: 'Jazz', userId: round.themeMasterId, pin })
+        .send({ customTheme: 'Jazz', userId: round.themeMasterId, pin })
         .expect(200);
 
       await prisma.track.createMany({
@@ -283,7 +283,7 @@ describe('GET /user/:userId/session (e2e)', () => {
 
       await request(app.getHttpServer())
         .patch(`/round/${roundId}`)
-        .send({ theme: 'Pop', userId: round.themeMasterId, pin })
+        .send({ customTheme: 'Pop', userId: round.themeMasterId, pin })
         .expect(200);
 
       await prisma.track.createMany({
@@ -420,7 +420,7 @@ describe('GET /user/:userId/session (e2e)', () => {
       });
       await request(app.getHttpServer())
         .patch(`/round/${firstRoundId}`)
-        .send({ theme: 'Rock', userId: firstRound.themeMasterId, pin })
+        .send({ customTheme: 'Rock', userId: firstRound.themeMasterId, pin })
         .expect(200);
 
       await prisma.track.createMany({
@@ -512,7 +512,7 @@ describe('GET /user/:userId/session (e2e)', () => {
 
       await request(app.getHttpServer())
         .patch(`/round/${secondRound.id}`)
-        .send({ theme: 'Jazz', userId: secondRound.themeMasterId, pin })
+        .send({ customTheme: 'Jazz', userId: secondRound.themeMasterId, pin })
         .expect(200);
 
       const songRes = await request(app.getHttpServer())
@@ -621,7 +621,7 @@ describe('GET /user/:userId/session (e2e)', () => {
 
       await request(app.getHttpServer())
         .patch(`/round/${roundId}`)
-        .send({ theme: 'Electronic', userId: round.themeMasterId, pin })
+        .send({ customTheme: 'Electronic', userId: round.themeMasterId, pin })
         .expect(200);
 
       await expect(
@@ -651,7 +651,7 @@ describe('GET /user/:userId/session (e2e)', () => {
 
       await request(app.getHttpServer())
         .patch(`/round/${roundId}`)
-        .send({ theme: 'Hip-Hop', userId: round.themeMasterId, pin })
+        .send({ customTheme: 'Hip-Hop', userId: round.themeMasterId, pin })
         .expect(200);
 
       const wsClient: ClientSocket = io(`http://localhost:${wsPort}`, {

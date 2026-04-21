@@ -66,14 +66,17 @@ export class UserService {
     const gameId = activeGame.id;
     const playerCount = activeGame.users.length;
 
+    const isThemePicked = (r: { themeId: number | null; customTheme: string | null }) =>
+      r.themeId !== null || r.customTheme !== null;
+
     const activeRounds = activeGame.rounds.filter(
-      (r) => r.theme !== '' && !r.revealCompleted,
+      (r) => isThemePicked(r) && !r.revealCompleted,
     );
     const currentRound = activeRounds[0];
 
     if (!currentRound) {
       const nextUnthemed = activeGame.rounds.find(
-        (r) => r.theme === '' && !r.revealCompleted,
+        (r) => !isThemePicked(r) && !r.revealCompleted,
       );
       if (!nextUnthemed) {
         return { phase: 'result', pin, gameId };

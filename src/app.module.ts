@@ -10,6 +10,7 @@ import { PickModule } from './pick/pick.module';
 import { RoomModule } from './room/room.module';
 import { RoundModule } from './round/round.module';
 import { SessionModule } from './session/session.module';
+import { ThemeModule } from './theme/theme.module';
 import { UserModule } from './user/user.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { UserModule } from './user/user.module';
     GameModule,
     RoundModule,
     PickModule,
+    ThemeModule,
     UserModule,
   ],
   controllers: [AppController],
