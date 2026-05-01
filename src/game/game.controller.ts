@@ -52,6 +52,14 @@ export class GameController {
     return this.gameService.calculateResults(game);
   }
 
+  @Get(':gameId/standings/:roundId')
+  async findStandings(
+    @Param('gameId', ParseIntPipe) gameId: number,
+    @Param('roundId', ParseIntPipe) roundId: number,
+  ) {
+    return this.gameService.getStandings(gameId, roundId);
+  }
+
   @Patch(':id/finish')
   async finish(@Param('id', ParseIntPipe) id: number) {
     const game = await this.gameService.findWithRoom(id);

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -89,6 +89,89 @@ export class GameService {
         id,
       },
     });
+  }
+
+  async getStandings(gameId: number, roundId: number) {
+    const game = await this.prisma.client.game.findFirstOrThrow({
+      where: { id: gameId },
+      include: {
+        users: true,
+        rounds: {
+          include: {
+            picks: {
+              include: { votes: true },
+            },
+          },
+        },
+      },
+    });
+
+    const rounds = [...game.rounds].sort((a, b) => a.id - b.id);
+    const targetIndex = rounds.findIndex((r) => r.id === roundId);
+    if (targetIndex === -1) {
+      throw new NotFoundException('Round not found in this game');
+    }
+
+    const computeTotals = (subset: typeof rounds) => {
+      const totals = new Map<string, number>();
+      for (const user of game.users) totals.set(user.id, 0);
+      for (const round of subset) {
+        for (const pick of round.picks) {
+          for (const vote of pick.votes) {
+            if (vote.guessedUserId === pick.userId) {
+              totals.set(
+                vote.guessUserId,
+                (totals.get(vote.guessUserId) ?? 0) + 1,
+              );
+            }
+          }
+        }
+      }
+      return totals;
+    };
+
+    const totalScores = computeTotals(rounds.slice(0, targetIndex + 1));
+    const previousTotals =
+      targetIndex > 0 ? computeTotals(rounds.slice(0, targetIndex)) : null;
+
+    const roundScores = new Map<string, number>();
+    for (const user of game.users) roundScores.set(user.id, 0);
+    for (const pick of rounds[targetIndex].picks) {
+      for (const vote of pick.votes) {
+        if (vote.guessedUserId === pick.userId) {
+          roundScores.set(
+            vote.guessUserId,
+            (roundScores.get(vote.guessUserId) ?? 0) + 1,
+          );
+        }
+      }
+    }
+
+    const rank = (totals: Map<string, number>) => {
+      const sorted = [...game.users].sort((a, b) => {
+        const diff = (totals.get(b.id) ?? 0) - (totals.get(a.id) ?? 0);
+        if (diff !== 0) return diff;
+        return a.id.localeCompare(b.id);
+      });
+      const places = new Map<string, number>();
+      sorted.forEach((u, i) => places.set(u.id, i + 1));
+      return places;
+    };
+
+    const places = rank(totalScores);
+    const previousPlaces = previousTotals ? rank(previousTotals) : null;
+
+    const standings = game.users.map((user) => ({
+      user,
+      totalScore: totalScores.get(user.id) ?? 0,
+      roundScore: roundScores.get(user.id) ?? 0,
+      place: places.get(user.id)!,
+      previousPlace: previousPlaces ? previousPlaces.get(user.id)! : null,
+    }));
+
+    standings.sort((a, b) => a.place - b.place);
+
+    return standings;
   }
 
   findActiveByRoomPin(pin: string) {
