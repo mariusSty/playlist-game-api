@@ -226,7 +226,6 @@ describe('GET /user/:userId/session (e2e)', () => {
             artist: 'A1',
             album: 'Al1',
             cover: 'c1',
-            previewUrl: 'p1',
           },
           {
             id: 'track-vote-1b',
@@ -234,7 +233,6 @@ describe('GET /user/:userId/session (e2e)', () => {
             artist: 'A2',
             album: 'Al2',
             cover: 'c2',
-            previewUrl: 'p2',
           },
         ],
       });
@@ -294,7 +292,6 @@ describe('GET /user/:userId/session (e2e)', () => {
             artist: 'A1',
             album: 'Al1',
             cover: 'c1',
-            previewUrl: 'p1',
           },
           {
             id: 'track-rev-1b',
@@ -302,7 +299,6 @@ describe('GET /user/:userId/session (e2e)', () => {
             artist: 'A2',
             album: 'Al2',
             cover: 'c2',
-            previewUrl: 'p2',
           },
         ],
       });
@@ -431,7 +427,6 @@ describe('GET /user/:userId/session (e2e)', () => {
             artist: 'A1',
             album: 'Al1',
             cover: 'c1',
-            previewUrl: 'p1',
           },
           {
             id: 'track-flow-1b',
@@ -439,7 +434,6 @@ describe('GET /user/:userId/session (e2e)', () => {
             artist: 'A2',
             album: 'Al2',
             cover: 'c2',
-            previewUrl: 'p2',
           },
         ],
       });
@@ -677,7 +671,6 @@ describe('GET /user/:userId/session (e2e)', () => {
             artist: 'Test Artist',
             album: 'Test Album',
             cover: 'https://example.com/c.jpg',
-            previewUrl: 'https://example.com/p.mp3',
           },
         })
         .expect(201);

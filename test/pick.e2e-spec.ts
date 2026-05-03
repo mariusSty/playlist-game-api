@@ -121,7 +121,6 @@ describe('PickController (e2e)', () => {
       artist: `Artist ${suffix}`,
       album: `Album ${suffix}`,
       cover: `https://example.com/cover-${suffix}.jpg`,
-      previewUrl: `https://example.com/preview-${suffix}.mp3`,
     };
   }
 

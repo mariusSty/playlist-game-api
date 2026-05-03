@@ -208,7 +208,6 @@ describe('GameController (e2e)', () => {
             artist: 'Artist 1',
             album: 'Album 1',
             cover: 'https://example.com/cover-1.jpg',
-            previewUrl: 'https://example.com/1.mp3',
           },
           {
             id: 'track-res-2',
@@ -216,7 +215,6 @@ describe('GameController (e2e)', () => {
             artist: 'Artist 2',
             album: 'Album 2',
             cover: 'https://example.com/cover-2.jpg',
-            previewUrl: 'https://example.com/2.mp3',
           },
           {
             id: 'track-res-3',
@@ -224,7 +222,6 @@ describe('GameController (e2e)', () => {
             artist: 'Artist 3',
             album: 'Album 3',
             cover: 'https://example.com/cover-3.jpg',
-            previewUrl: 'https://example.com/3.mp3',
           },
         ],
       });

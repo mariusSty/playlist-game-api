@@ -112,7 +112,6 @@ describe('VoteController (e2e)', () => {
             artist: `Artist ${i}`,
             album: `Album ${i}`,
             cover: `https://example.com/cover-${i}.jpg`,
-            previewUrl: `https://example.com/preview-${i}.mp3`,
           },
         })
         .expect(201);

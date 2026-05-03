@@ -16,7 +16,6 @@ export class MusicApiService {
         artist: item.artist.name,
         album: item.album.title,
         cover: item.album.cover_medium,
-        previewUrl: item.preview,
       })) ?? [];
 
     return data;

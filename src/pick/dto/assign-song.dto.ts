@@ -6,7 +6,6 @@ export class AssignSongDto {
     artist: string;
     album: string;
     cover: string;
-    previewUrl: string;
   };
   userId: string;
 }

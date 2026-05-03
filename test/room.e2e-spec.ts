@@ -447,7 +447,6 @@ describe('RoomController (e2e)', () => {
             artist: 'Artist',
             album: 'Album',
             cover: 'cover',
-            previewUrl: 'preview',
           },
         });
         await prisma.pick.create({
@@ -511,7 +510,6 @@ describe('RoomController (e2e)', () => {
               artist: 'A1',
               album: 'Al1',
               cover: 'c1',
-              previewUrl: 'p1',
             },
             {
               id: 'track-gleave-3b',
@@ -519,7 +517,6 @@ describe('RoomController (e2e)', () => {
               artist: 'A2',
               album: 'Al2',
               cover: 'c2',
-              previewUrl: 'p2',
             },
           ],
         });
