@@ -56,6 +56,33 @@ export class GameService {
     });
   }
 
+  /**
+   * Standard competition ranking (1224): users with equal scores share the
+   * same place; the next place skips accordingly.
+   */
+  private assignPlaces(
+    scores: Map<string, number>,
+    userIds: string[],
+  ): Map<string, number> {
+    const sorted = [...userIds].sort((a, b) => {
+      const diff = (scores.get(b) ?? 0) - (scores.get(a) ?? 0);
+      if (diff !== 0) return diff;
+      return a.localeCompare(b);
+    });
+    const places = new Map<string, number>();
+    let currentPlace = 0;
+    let lastScore: number | null = null;
+    sorted.forEach((id, index) => {
+      const score = scores.get(id) ?? 0;
+      if (score !== lastScore) {
+        currentPlace = index + 1;
+        lastScore = score;
+      }
+      places.set(id, currentPlace);
+    });
+    return places;
+  }
+
   calculateResults(game: Awaited<ReturnType<GameService['findOne']>>) {
     const scoreMap = new Map<
       string,
@@ -77,7 +104,20 @@ export class GameService {
       }
     }
 
-    return [...scoreMap.values()];
+    const scoreById = new Map<string, number>();
+    for (const [id, { score }] of scoreMap) scoreById.set(id, score);
+    const places = this.assignPlaces(
+      scoreById,
+      game.users.map((u) => u.id),
+    );
+
+    return [...scoreMap.values()]
+      .map(({ user, score }) => ({
+        user,
+        score,
+        place: places.get(user.id)!,
+      }))
+      .sort((a, b) => a.place - b.place || a.user.id.localeCompare(b.user.id));
   }
 
   detachRoom(id: number) {
@@ -147,19 +187,11 @@ export class GameService {
       }
     }
 
-    const rank = (totals: Map<string, number>) => {
-      const sorted = [...game.users].sort((a, b) => {
-        const diff = (totals.get(b.id) ?? 0) - (totals.get(a.id) ?? 0);
-        if (diff !== 0) return diff;
-        return a.id.localeCompare(b.id);
-      });
-      const places = new Map<string, number>();
-      sorted.forEach((u, i) => places.set(u.id, i + 1));
-      return places;
-    };
-
-    const places = rank(totalScores);
-    const previousPlaces = previousTotals ? rank(previousTotals) : null;
+    const userIds = game.users.map((u) => u.id);
+    const places = this.assignPlaces(totalScores, userIds);
+    const previousPlaces = previousTotals
+      ? this.assignPlaces(previousTotals, userIds)
+      : null;
 
     const standings = game.users.map((user) => ({
       user,
@@ -169,7 +201,9 @@ export class GameService {
       previousPlace: previousPlaces ? previousPlaces.get(user.id)! : null,
     }));
 
-    standings.sort((a, b) => a.place - b.place);
+    standings.sort(
+      (a, b) => a.place - b.place || a.user.id.localeCompare(b.user.id),
+    );
 
     return standings;
   }
