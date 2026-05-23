@@ -226,7 +226,7 @@ describe('Theme (e2e)', () => {
       expect(updated.customTheme).toBe('Padded theme');
     });
 
-    it('should reject customTheme longer than 100 characters', async () => {
+    it('should reject customTheme longer than 300 characters', async () => {
       const { pin, roundId } = await createRoomAndGame('host-ct-3', 'Host', [
         { id: 'guest-ct-3', name: 'Guest' },
       ]);
@@ -235,7 +235,7 @@ describe('Theme (e2e)', () => {
       await request(app.getHttpServer())
         .patch(`/round/${roundId}`)
         .send({
-          customTheme: 'a'.repeat(101),
+          customTheme: 'a'.repeat(301),
           userId: round.themeMasterId,
           pin,
         })

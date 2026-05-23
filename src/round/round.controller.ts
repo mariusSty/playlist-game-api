@@ -57,6 +57,12 @@ export class RoundController {
       );
     }
 
+    if (hasCustom && pickThemeDto.customTheme.trim().length > 300) {
+      throw new BadRequestException(
+        'customTheme must be at most 300 characters',
+      );
+    }
+
     const updated = await this.roundService.update(roundId, {
       themeId: hasThemeId ? pickThemeDto.themeId : null,
       customTheme: hasCustom ? pickThemeDto.customTheme!.trim() : null,
