@@ -267,6 +267,15 @@ export class GameService {
             roundId: { in: activeRoundIds },
           },
         });
+
+        // Delete the leaving user's readiness on active rounds so they
+        // don't block the ready threshold for the remaining players
+        await tx.roundReady.deleteMany({
+          where: {
+            userId,
+            roundId: { in: activeRoundIds },
+          },
+        });
       }
 
       // 3. Disconnect user from the game's users (m2m)

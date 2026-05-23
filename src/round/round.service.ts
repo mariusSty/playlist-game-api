@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -34,6 +34,9 @@ export class RoundService {
             user: true,
           },
         },
+        readies: {
+          select: { userId: true },
+        },
       },
     });
   }
@@ -53,22 +56,44 @@ export class RoundService {
     });
   }
 
-  async markRevealCompleted(pin: string) {
-    // Find the current round (themed, not yet reveal-completed)
-    const round = await this.prisma.client.round.findFirst({
-      where: {
-        game: { room: { pin } },
-        OR: [{ themeId: { not: null } }, { customTheme: { not: null } }],
-        revealCompleted: false,
+  async markReady(roundId: number, userId: string) {
+    const round = await this.prisma.client.round.findUnique({
+      where: { id: roundId },
+      include: {
+        game: { include: { users: { select: { id: true } } } },
+        readies: { select: { userId: true } },
       },
-      orderBy: { id: 'asc' },
     });
 
-    if (!round) return null;
+    if (!round) {
+      throw new NotFoundException('Round not found');
+    }
 
-    return this.prisma.client.round.update({
-      where: { id: round.id },
-      data: { revealCompleted: true },
+    const totalCount = round.game.users.length;
+    const isPlayer = round.game.users.some((u) => u.id === userId);
+    if (!isPlayer) {
+      throw new NotFoundException('User is not part of this game');
+    }
+
+    await this.prisma.client.roundReady.upsert({
+      where: { roundId_userId: { roundId, userId } },
+      create: { roundId, userId },
+      update: {},
     });
+
+    const readyCount = await this.prisma.client.roundReady.count({
+      where: { roundId },
+    });
+
+    let completed = round.revealCompleted;
+    if (!completed && readyCount >= totalCount) {
+      await this.prisma.client.round.update({
+        where: { id: roundId },
+        data: { revealCompleted: true },
+      });
+      completed = true;
+    }
+
+    return { readyCount, totalCount, completed };
   }
 }

@@ -9,9 +9,9 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Query,
 } from '@nestjs/common';
 import { SessionGateway } from 'src/session/session.gateway';
+import { MarkReadyDto } from './dto/mark-ready.dto';
 import { PickThemeDto } from './dto/pick-theme.dto';
 import { RoundService } from './round.service';
 
@@ -67,10 +67,16 @@ export class RoundController {
     return updated;
   }
 
-  @Post('next')
-  async nextRound(@Query('pin') pin: string) {
-    await this.roundService.markRevealCompleted(pin);
-    this.sessionGateway.emitSessionUpdated(pin);
-    return;
+  @Post(':roundId/ready')
+  async markReady(
+    @Param('roundId', ParseIntPipe) roundId: number,
+    @Body() markReadyDto: MarkReadyDto,
+  ) {
+    const result = await this.roundService.markReady(
+      roundId,
+      markReadyDto.userId,
+    );
+    this.sessionGateway.emitSessionUpdated(markReadyDto.pin);
+    return result;
   }
 }

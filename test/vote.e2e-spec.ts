@@ -61,6 +61,7 @@ describe('VoteController (e2e)', () => {
     await prisma.vote.deleteMany();
     await prisma.pick.deleteMany();
     await prisma.track.deleteMany();
+    await prisma.roundReady.deleteMany();
     await prisma.round.deleteMany();
     await prisma.game.deleteMany();
     await prisma.room.deleteMany();

@@ -58,6 +58,7 @@ describe('RoomController (e2e)', () => {
     // Clean all tables between tests (order matters for FK constraints)
     await prisma.vote.deleteMany();
     await prisma.pick.deleteMany();
+    await prisma.roundReady.deleteMany();
     await prisma.round.deleteMany();
     await prisma.game.deleteMany();
     await prisma.room.deleteMany();

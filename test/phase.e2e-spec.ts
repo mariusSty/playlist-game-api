@@ -65,6 +65,7 @@ describe('GET /user/:userId/session (e2e)', () => {
     await prisma.vote.deleteMany();
     await prisma.pick.deleteMany();
     await prisma.track.deleteMany();
+    await prisma.roundReady.deleteMany();
     await prisma.round.deleteMany();
     await prisma.game.deleteMany();
     await prisma.room.deleteMany();
@@ -491,7 +492,12 @@ describe('GET /user/:userId/session (e2e)', () => {
       });
 
       await request(app.getHttpServer())
-        .post(`/round/next?pin=${pin}`)
+        .post(`/round/${firstRoundId}/ready`)
+        .send({ userId: 'host-flow-1', pin })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post(`/round/${firstRoundId}/ready`)
+        .send({ userId: 'guest-flow-1', pin })
         .expect(201);
 
       const themeRes = await request(app.getHttpServer())

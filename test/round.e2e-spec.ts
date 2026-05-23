@@ -60,6 +60,7 @@ describe('RoundController (e2e)', () => {
   afterEach(async () => {
     await prisma.vote.deleteMany();
     await prisma.pick.deleteMany();
+    await prisma.roundReady.deleteMany();
     await prisma.round.deleteMany();
     await prisma.game.deleteMany();
     await prisma.room.deleteMany();
@@ -210,89 +211,145 @@ describe('RoundController (e2e)', () => {
     });
   });
 
-  describe('POST /round/next', () => {
-    it('should mark round reveal completed and emit session:updated', async () => {
+  describe('POST /round/:roundId/ready', () => {
+    it('does not complete the round when only some players are ready', async () => {
       const { pin, firstRoundId } = await createRoomAndGame(
-        'host-next-1',
+        'host-ready-1',
         'Host',
-        [{ id: 'guest-next-1', name: 'Guest' }],
+        [
+          { id: 'guest-ready-1', name: 'Guest A' },
+          { id: 'guest-ready-2', name: 'Guest B' },
+        ],
       );
 
-      // Set theme on first round so it becomes the active round
-      const firstRound = await prisma.round.findUnique({
-        where: { id: firstRoundId },
-      });
       await prisma.round.update({
         where: { id: firstRoundId },
         data: { customTheme: 'Done' },
       });
 
-      // Connect a WebSocket client and subscribe to the room
+      const response = await request(app.getHttpServer())
+        .post(`/round/${firstRoundId}/ready`)
+        .send({ userId: 'host-ready-1', pin })
+        .expect(201);
+
+      expect(response.body).toMatchObject({
+        readyCount: 1,
+        totalCount: 3,
+        completed: false,
+      });
+
+      const updated = await prisma.round.findUnique({
+        where: { id: firstRoundId },
+      });
+      expect(updated.revealCompleted).toBe(false);
+    });
+
+    it('completes the round and emits session:updated once everyone is ready', async () => {
+      const { pin, firstRoundId } = await createRoomAndGame(
+        'host-ready-3',
+        'Host',
+        [{ id: 'guest-ready-3', name: 'Guest' }],
+      );
+
+      await prisma.round.update({
+        where: { id: firstRoundId },
+        data: { customTheme: 'Done' },
+      });
+
+      // First player ready: not yet complete
+      await request(app.getHttpServer())
+        .post(`/round/${firstRoundId}/ready`)
+        .send({ userId: 'host-ready-3', pin })
+        .expect(201);
+
+      let stored = await prisma.round.findUnique({
+        where: { id: firstRoundId },
+      });
+      expect(stored.revealCompleted).toBe(false);
+
+      // Subscribe to WS before the final ready call to assert the broadcast
       const wsClient: ClientSocket = io(`http://localhost:${wsPort}`, {
         transports: ['websocket'],
         forceNew: true,
       });
       await new Promise<void>((resolve) => wsClient.on('connect', resolve));
-      wsClient.emit('session:subscribe', {
-        pin,
-        userId: firstRound.themeMasterId,
-      });
+      wsClient.emit('session:subscribe', { pin, userId: 'host-ready-3' });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       const gameStateChangedPromise = new Promise<void>((resolve) => {
         wsClient.on('session:updated', () => resolve());
       });
 
-      await request(app.getHttpServer())
-        .post(`/round/next?pin=${pin}`)
+      const response = await request(app.getHttpServer())
+        .post(`/round/${firstRoundId}/ready`)
+        .send({ userId: 'guest-ready-3', pin })
         .expect(201);
 
-      // Verify the round was marked as reveal completed
-      const updated = await prisma.round.findUnique({
+      expect(response.body).toMatchObject({
+        readyCount: 2,
+        totalCount: 2,
+        completed: true,
+      });
+
+      stored = await prisma.round.findUnique({
         where: { id: firstRoundId },
       });
-      expect(updated.revealCompleted).toBe(true);
+      expect(stored.revealCompleted).toBe(true);
 
-      // Verify WebSocket event was emitted
       await gameStateChangedPromise;
 
       wsClient.disconnect();
     });
 
-    it('should emit session:updated even when no active round to mark', async () => {
-      const { pin } = await createRoomAndGame('host-next-2', 'Host', [
-        { id: 'guest-next-2', name: 'Guest' },
-      ]);
+    it('is idempotent when the same user marks ready twice', async () => {
+      const { pin, firstRoundId } = await createRoomAndGame(
+        'host-ready-5',
+        'Host',
+        [{ id: 'guest-ready-5', name: 'Guest' }],
+      );
 
-      // Mark all rounds as completed
-      await prisma.round.updateMany({
-        where: {
-          game: { room: { pin } },
-        },
-        data: { customTheme: 'Done', revealCompleted: true },
-      });
-
-      // Connect a WebSocket client and subscribe to the room
-      const wsClient: ClientSocket = io(`http://localhost:${wsPort}`, {
-        transports: ['websocket'],
-        forceNew: true,
-      });
-      await new Promise<void>((resolve) => wsClient.on('connect', resolve));
-      wsClient.emit('session:subscribe', { pin, userId: 'host-next-2' });
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      const gameStateChangedPromise = new Promise<void>((resolve) => {
-        wsClient.on('session:updated', () => resolve());
+      await prisma.round.update({
+        where: { id: firstRoundId },
+        data: { customTheme: 'Done' },
       });
 
       await request(app.getHttpServer())
-        .post(`/round/next?pin=${pin}`)
+        .post(`/round/${firstRoundId}/ready`)
+        .send({ userId: 'host-ready-5', pin })
         .expect(201);
 
-      // Verify WebSocket event was emitted
-      await gameStateChangedPromise;
+      const response = await request(app.getHttpServer())
+        .post(`/round/${firstRoundId}/ready`)
+        .send({ userId: 'host-ready-5', pin })
+        .expect(201);
 
-      wsClient.disconnect();
+      expect(response.body).toMatchObject({
+        readyCount: 1,
+        totalCount: 2,
+        completed: false,
+      });
+    });
+
+    it('returns 404 when the user is not part of the game', async () => {
+      const { pin, firstRoundId } = await createRoomAndGame(
+        'host-ready-6',
+        'Host',
+        [{ id: 'guest-ready-6', name: 'Guest' }],
+      );
+
+      await prisma.user.create({ data: { id: 'outsider-1', name: 'Outside' } });
+
+      await request(app.getHttpServer())
+        .post(`/round/${firstRoundId}/ready`)
+        .send({ userId: 'outsider-1', pin })
+        .expect(404);
+    });
+
+    it('returns 404 for a non-existent round', async () => {
+      await request(app.getHttpServer())
+        .post('/round/99999/ready')
+        .send({ userId: 'whoever', pin: '000000' })
+        .expect(404);
     });
   });
 });
