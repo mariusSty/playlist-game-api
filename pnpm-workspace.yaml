@@ -1,0 +1,7 @@
+allowBuilds:
+  '@nestjs/core': false
+  '@prisma/engines': false
+  '@sentry-internal/node-cpu-profiler': false
+  esbuild: false
+  prisma: false
+  unrs-resolver: false
