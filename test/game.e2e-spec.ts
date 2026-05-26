@@ -314,36 +314,204 @@ describe('GameController (e2e)', () => {
     });
   });
 
-  describe('PATCH /game/:id/finish', () => {
-    it('should detach the room from the game', async () => {
-      const pin = await createRoomWithUsers('host-finish-1', 'Host', [
-        { id: 'guest-finish-1', name: 'Guest' },
+  describe('DELETE /game/:id/users/:userId', () => {
+    it('should disconnect the user from the game but keep the game attached when others remain', async () => {
+      const pin = await createRoomWithUsers('host-lr-1', 'Host', [
+        { id: 'guest-lr-1', name: 'Guest' },
       ]);
 
       const createRes = await request(app.getHttpServer())
         .post('/game')
         .send({ pin })
         .expect(201);
-
       const gameId = createRes.body.gameId;
 
-      // Verify the game is attached to the room
-      const gameBefore = await prisma.game.findUnique({
-        where: { id: gameId },
-      });
-      expect(gameBefore.roomId).not.toBeNull();
-
       const response = await request(app.getHttpServer())
-        .patch(`/game/${gameId}/finish`)
+        .delete(`/game/${gameId}/users/guest-lr-1`)
         .expect(200);
 
-      expect(response.body).toEqual({ finished: true });
+      expect(response.body).toEqual({ left: true, detached: false });
 
-      // Verify the room was detached
       const gameAfter = await prisma.game.findUnique({
         where: { id: gameId },
+        include: { users: true },
+      });
+      expect(gameAfter.roomId).not.toBeNull();
+      expect(gameAfter.users.map((u) => u.id)).toEqual(['host-lr-1']);
+    });
+
+    it('should auto-detach the game when the last user leaves the result', async () => {
+      const pin = await createRoomWithUsers('host-lr-2', 'Host', [
+        { id: 'guest-lr-2', name: 'Guest' },
+      ]);
+
+      const createRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+      const gameId = createRes.body.gameId;
+
+      await request(app.getHttpServer())
+        .delete(`/game/${gameId}/users/guest-lr-2`)
+        .expect(200);
+
+      const response = await request(app.getHttpServer())
+        .delete(`/game/${gameId}/users/host-lr-2`)
+        .expect(200);
+
+      expect(response.body).toEqual({ left: true, detached: true });
+
+      const gameAfter = await prisma.game.findUnique({
+        where: { id: gameId },
+        include: { users: true },
       });
       expect(gameAfter.roomId).toBeNull();
+      expect(gameAfter.users).toHaveLength(0);
+    });
+
+    it('should keep the room hostId unchanged when the host leaves the result first', async () => {
+      const pin = await createRoomWithUsers('host-lr-3', 'Host', [
+        { id: 'guest-lr-3', name: 'Guest' },
+      ]);
+
+      const createRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+      const gameId = createRes.body.gameId;
+
+      await request(app.getHttpServer())
+        .delete(`/game/${gameId}/users/host-lr-3`)
+        .expect(200);
+
+      const room = await prisma.room.findUnique({ where: { pin } });
+      expect(room.hostId).toBe('host-lr-3');
+
+      const gameAfter = await prisma.game.findUnique({
+        where: { id: gameId },
+        include: { users: true },
+      });
+      expect(gameAfter.roomId).not.toBeNull();
+      expect(gameAfter.users.map((u) => u.id)).toEqual(['guest-lr-3']);
+    });
+
+    it('should detach immediately when the lone host leaves a solo game', async () => {
+      const pin = await createRoomWithUsers('host-lr-4', 'Host');
+
+      const createRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+      const gameId = createRes.body.gameId;
+
+      const response = await request(app.getHttpServer())
+        .delete(`/game/${gameId}/users/host-lr-4`)
+        .expect(200);
+
+      expect(response.body).toEqual({ left: true, detached: true });
+
+      const gameAfter = await prisma.game.findUnique({
+        where: { id: gameId },
+        include: { users: true },
+      });
+      expect(gameAfter.roomId).toBeNull();
+      expect(gameAfter.users).toHaveLength(0);
+    });
+
+    it('should be idempotent when called for a user already removed', async () => {
+      const pin = await createRoomWithUsers('host-lr-5', 'Host', [
+        { id: 'guest-lr-5', name: 'Guest' },
+      ]);
+
+      const createRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+      const gameId = createRes.body.gameId;
+
+      await request(app.getHttpServer())
+        .delete(`/game/${gameId}/users/guest-lr-5`)
+        .expect(200);
+
+      const response = await request(app.getHttpServer())
+        .delete(`/game/${gameId}/users/guest-lr-5`)
+        .expect(200);
+
+      expect(response.body).toEqual({ left: true, detached: false });
+    });
+  });
+
+  describe('POST /game with previous active game', () => {
+    it('should return 409 when an active game still has players', async () => {
+      const pin = await createRoomWithUsers('host-conflict-1', 'Host', [
+        { id: 'guest-conflict-1', name: 'Guest' },
+      ]);
+
+      await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(409);
+    });
+
+    it('should defensively detach a stuck game with no users and create a new one', async () => {
+      const pin = await createRoomWithUsers('host-conflict-2', 'Host', [
+        { id: 'guest-conflict-2', name: 'Guest' },
+      ]);
+
+      const firstRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+      const firstGameId = firstRes.body.gameId;
+
+      // Force stuck state: empty users but roomId still set
+      await prisma.game.update({
+        where: { id: firstGameId },
+        data: { users: { set: [] } },
+      });
+
+      const secondRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+
+      expect(secondRes.body.gameId).not.toBe(firstGameId);
+
+      const firstAfter = await prisma.game.findUnique({
+        where: { id: firstGameId },
+      });
+      expect(firstAfter.roomId).toBeNull();
+    });
+
+    it('should succeed once all users have left the previous game', async () => {
+      const pin = await createRoomWithUsers('host-conflict-3', 'Host', [
+        { id: 'guest-conflict-3', name: 'Guest' },
+      ]);
+
+      const firstRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+      const firstGameId = firstRes.body.gameId;
+
+      await request(app.getHttpServer())
+        .delete(`/game/${firstGameId}/users/guest-conflict-3`)
+        .expect(200);
+      await request(app.getHttpServer())
+        .delete(`/game/${firstGameId}/users/host-conflict-3`)
+        .expect(200);
+
+      const secondRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+
+      expect(secondRes.body.gameId).not.toBe(firstGameId);
     });
   });
 });

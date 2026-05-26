@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
+import { AcceleratedPrismaClient, PrismaService } from 'src/prisma.service';
+
+type TxClient = Parameters<
+  Parameters<AcceleratedPrismaClient['$transaction']>[0]
+>[0];
 
 @Injectable()
 export class GameService {
@@ -219,72 +223,107 @@ export class GameService {
   }
 
   async removeUser(gameId: number, userId: string) {
-    await this.prisma.client.$transaction(async (tx) => {
-      // 1. Delete unthemed rounds where this user is theme master (no picks/votes exist yet)
-      await tx.round.deleteMany({
+    await this.prisma.client.$transaction((tx) =>
+      this.removeUserTx(tx, gameId, userId),
+    );
+  }
+
+  private async removeUserTx(
+    tx: TxClient,
+    gameId: number,
+    userId: string,
+  ) {
+    // 1. Delete unthemed rounds where this user is theme master (no picks/votes exist yet)
+    await tx.round.deleteMany({
+      where: {
+        gameId,
+        themeMasterId: userId,
+        themeId: null,
+        customTheme: null,
+      },
+    });
+
+    // 2. Find non-completed active rounds (themed, not yet revealed)
+    const activeRounds = await tx.round.findMany({
+      where: {
+        gameId,
+        OR: [{ themeId: { not: null } }, { customTheme: { not: null } }],
+        revealCompleted: false,
+      },
+      select: { id: true },
+    });
+    const activeRoundIds = activeRounds.map((r) => r.id);
+
+    if (activeRoundIds.length > 0) {
+      // Delete votes ON the leaving user's picks in active rounds
+      await tx.vote.deleteMany({
         where: {
-          gameId,
-          themeMasterId: userId,
-          themeId: null,
-          customTheme: null,
-        },
-      });
-
-      // 2. Find non-completed active rounds (themed, not yet revealed)
-      const activeRounds = await tx.round.findMany({
-        where: {
-          gameId,
-          OR: [{ themeId: { not: null } }, { customTheme: { not: null } }],
-          revealCompleted: false,
-        },
-        select: { id: true },
-      });
-      const activeRoundIds = activeRounds.map((r) => r.id);
-
-      if (activeRoundIds.length > 0) {
-        // Delete votes ON the leaving user's picks in active rounds
-        await tx.vote.deleteMany({
-          where: {
-            pick: {
-              userId,
-              roundId: { in: activeRoundIds },
-            },
-          },
-        });
-
-        // Delete votes BY the leaving user in active rounds
-        await tx.vote.deleteMany({
-          where: {
-            guessUserId: userId,
-            pick: { roundId: { in: activeRoundIds } },
-          },
-        });
-
-        // Delete the leaving user's picks in active rounds
-        await tx.pick.deleteMany({
-          where: {
+          pick: {
             userId,
             roundId: { in: activeRoundIds },
           },
-        });
+        },
+      });
 
-        // Delete the leaving user's readiness on active rounds so they
-        // don't block the ready threshold for the remaining players
-        await tx.roundReady.deleteMany({
-          where: {
-            userId,
-            roundId: { in: activeRoundIds },
-          },
+      // Delete votes BY the leaving user in active rounds
+      await tx.vote.deleteMany({
+        where: {
+          guessUserId: userId,
+          pick: { roundId: { in: activeRoundIds } },
+        },
+      });
+
+      // Delete the leaving user's picks in active rounds
+      await tx.pick.deleteMany({
+        where: {
+          userId,
+          roundId: { in: activeRoundIds },
+        },
+      });
+
+      // Delete the leaving user's readiness on active rounds so they
+      // don't block the ready threshold for the remaining players
+      await tx.roundReady.deleteMany({
+        where: {
+          userId,
+          roundId: { in: activeRoundIds },
+        },
+      });
+    }
+
+    // 3. Disconnect user from the game's users (m2m)
+    await tx.game.update({
+      where: { id: gameId },
+      data: {
+        users: { disconnect: { id: userId } },
+      },
+    });
+  }
+
+  async leaveResult(
+    gameId: number,
+    userId: string,
+  ): Promise<{ detached: boolean }> {
+    return this.prisma.client.$transaction(async (tx) => {
+      await this.removeUserTx(tx, gameId, userId);
+
+      const game = await tx.game.findUnique({
+        where: { id: gameId },
+        select: {
+          roomId: true,
+          users: { select: { id: true } },
+        },
+      });
+
+      if (game && game.roomId !== null && game.users.length === 0) {
+        await tx.game.update({
+          where: { id: gameId },
+          data: { roomId: null },
         });
+        return { detached: true };
       }
 
-      // 3. Disconnect user from the game's users (m2m)
-      await tx.game.update({
-        where: { id: gameId },
-        data: {
-          users: { disconnect: { id: userId } },
-        },
-      });
+      return { detached: false };
     });
   }
 }

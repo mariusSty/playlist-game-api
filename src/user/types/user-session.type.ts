@@ -1,6 +1,6 @@
 export type UserSession =
   | { phase: 'home' }
-  | { phase: 'lobby'; pin: string }
+  | { phase: 'lobby'; pin: string; canStartGame: boolean }
   | { phase: 'theme'; pin: string; gameId: number; roundId: number }
   | { phase: 'song'; pin: string; gameId: number; roundId: number }
   | {

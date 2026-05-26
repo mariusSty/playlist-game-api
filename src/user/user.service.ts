@@ -60,7 +60,15 @@ export class UserService {
     const activeGame = user.room.games[0];
 
     if (!activeGame) {
-      return { phase: 'lobby', pin };
+      return { phase: 'lobby', pin, canStartGame: true };
+    }
+
+    if (!activeGame.users.some((u) => u.id === userId)) {
+      return {
+        phase: 'lobby',
+        pin,
+        canStartGame: activeGame.users.length === 0,
+      };
     }
 
     const gameId = activeGame.id;

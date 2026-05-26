@@ -1,12 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpException,
   HttpStatus,
   Param,
   ParseIntPipe,
-  Patch,
   Post,
 } from '@nestjs/common';
 import { RoomService } from 'src/room/room.service';
@@ -27,6 +27,20 @@ export class GameController {
     const room = await this.roomService.findOne(createGameDto.pin);
     if (!room) {
       throw new HttpException('Room not found', HttpStatus.NOT_FOUND);
+    }
+
+    const activeGame = await this.gameService.findActiveByRoomPin(
+      createGameDto.pin,
+    );
+    if (activeGame) {
+      if (activeGame.users.length > 0) {
+        throw new HttpException(
+          'Previous game still has players viewing the results',
+          HttpStatus.CONFLICT,
+        );
+      }
+      // Defensive: stuck state where users emptied without auto-detach
+      await this.gameService.detachRoom(activeGame.id);
     }
 
     const game = await this.gameService.create(
@@ -60,17 +74,20 @@ export class GameController {
     return this.gameService.getStandings(gameId, roundId);
   }
 
-  @Patch(':id/finish')
-  async finish(@Param('id', ParseIntPipe) id: number) {
+  @Delete(':id/users/:userId')
+  async leaveResult(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('userId') userId: string,
+  ) {
     const game = await this.gameService.findWithRoom(id);
     const pin = game.room?.pin;
 
-    await this.gameService.detachRoom(id);
+    const { detached } = await this.gameService.leaveResult(id, userId);
 
     if (pin) {
       this.sessionGateway.emitSessionUpdated(pin);
     }
 
-    return { finished: true };
+    return { left: true, detached };
   }
 }

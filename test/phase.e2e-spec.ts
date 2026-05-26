@@ -119,10 +119,10 @@ describe('GET /user/:userId/session (e2e)', () => {
         .get('/user/host-lobby-1/session')
         .expect(200);
 
-      expect(res.body).toEqual({ phase: 'lobby', pin });
+      expect(res.body).toEqual({ phase: 'lobby', pin, canStartGame: true });
     });
 
-    it('should return lobby after game is finished', async () => {
+    it('should return lobby with canStartGame=false when host has left the result but a player remains', async () => {
       const pin = await createRoomWithUsers('host-lobby-2', 'Host', [
         { id: 'guest-lobby-2', name: 'Guest' },
       ]);
@@ -133,14 +133,38 @@ describe('GET /user/:userId/session (e2e)', () => {
         .expect(201);
 
       await request(app.getHttpServer())
-        .patch(`/game/${gameRes.body.gameId}/finish`)
+        .delete(`/game/${gameRes.body.gameId}/users/host-lobby-2`)
         .expect(200);
 
       const res = await request(app.getHttpServer())
         .get('/user/host-lobby-2/session')
         .expect(200);
 
-      expect(res.body).toEqual({ phase: 'lobby', pin });
+      expect(res.body).toEqual({ phase: 'lobby', pin, canStartGame: false });
+    });
+
+    it('should return lobby with canStartGame=true once the last user has left the result', async () => {
+      const pin = await createRoomWithUsers('host-lobby-3', 'Host', [
+        { id: 'guest-lobby-3', name: 'Guest' },
+      ]);
+
+      const gameRes = await request(app.getHttpServer())
+        .post('/game')
+        .send({ pin })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .delete(`/game/${gameRes.body.gameId}/users/guest-lobby-3`)
+        .expect(200);
+      await request(app.getHttpServer())
+        .delete(`/game/${gameRes.body.gameId}/users/host-lobby-3`)
+        .expect(200);
+
+      const res = await request(app.getHttpServer())
+        .get('/user/host-lobby-3/session')
+        .expect(200);
+
+      expect(res.body).toEqual({ phase: 'lobby', pin, canStartGame: true });
     });
   });
 
@@ -361,7 +385,7 @@ describe('GET /user/:userId/session (e2e)', () => {
   });
 
   describe('phase: result', () => {
-    it('should return result phase when game is finished', async () => {
+    it('should return lobby once the user has individually left the result', async () => {
       const pin = await createRoomWithUsers('host-result-1', 'Host', [
         { id: 'guest-result-1', name: 'Guest' },
       ]);
@@ -372,23 +396,15 @@ describe('GET /user/:userId/session (e2e)', () => {
         .expect(201);
 
       await request(app.getHttpServer())
-        .patch(`/game/${gameRes.body.gameId}/finish`)
+        .delete(`/game/${gameRes.body.gameId}/users/host-result-1`)
         .expect(200);
 
-      // After finish, gameid is detached but user tracks the last game
-      // The user still has the game associated (game has no room but user still is in room)
-      // Since game.roomId = null → result phase
-      // But user is still in the room → game filter = games where roomId is not null → no active game
-      // → lobby. That means result is shown via the game's detached state.
-      // User is still in the room → room has no active game → lobby
-      // BUT user session for a finished game shows lobby (game detached).
-      // Let the test simply verify the user's host session after game finishes.
       const res = await request(app.getHttpServer())
         .get('/user/host-result-1/session')
         .expect(200);
 
-      // After game finishes (roomId = null), room has no active game → lobby
-      expect(res.body).toEqual({ phase: 'lobby', pin });
+      // Host has left game.users but a guest remains → canStartGame: false
+      expect(res.body).toEqual({ phase: 'lobby', pin, canStartGame: false });
     });
   });
 
